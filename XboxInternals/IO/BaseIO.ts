@@ -131,12 +131,6 @@ module XboxInternals.IO {
             return val;
         }
 
-        public ReadWString(len = -1): string {
-            var val = String.fromCharCode.apply(null, new Uint8Array(this.buffer, this._position, len));
-            this.SetPosition(this.GetPosition() + len);
-            return val;
-        }
-
         public ReadImage(length: number): HTMLImageElement {
             var binary = '';
             var bytes = new Uint8Array(this.buffer, this._position, length);
@@ -151,8 +145,15 @@ module XboxInternals.IO {
 
         public WriteByte(byte: Uint8Array) {
             var view = new DataView(this.buffer, this._position, 1);
-            view.setInt8(0, byte[0]);
+            view.setUint8(0, byte[0]);
             this.SetPosition(this.GetPosition() + 1);
+        }
+
+        public WriteBytes(bytes: Uint8Array) {
+            var view = new DataView(this.buffer, this._position, bytes.length);
+            for (var i = 0; i < bytes.length; i++)
+                view.setUint8(i, bytes[i]);
+            this.SetPosition(this.GetPosition() + bytes.length);
         }
 
         public WriteWord(word: number) {
@@ -162,19 +163,49 @@ module XboxInternals.IO {
         }
 
         public WriteInt24(i24: number, et: EndianType = EndianType.Default) {
-            /* TODO: Write function to write as Int24 */
+            var byteArray = new Uint8Array(3);
+
+            var orig = this.byteOrder;
+            if (et != EndianType.Default)
+                this.byteOrder = et;
+
+            if (this.byteOrder == EndianType.LittleEndian)
+            {
+                i24 <<= 8;
+                for (var i = 0; i < 3; i++)
+                    byteArray[2 - i] = (i24 >> ((i + 1) * 8)) & 0xFF;
+                this.reverseByteArray(byteArray);
+            }
+            else
+            {
+                for (var i = 0; i < 3; i++)
+                    byteArray[2 - i] = (i24 >> (i * 8)) & 0xFF;
+            }
+            
+
+            this.WriteBytes(byteArray);
+            this.byteOrder = orig;
         }
 
         public WriteString(str: string, forceLen = -1, nullTermination = true, nullTerminator = 0) {
-        
-        }
+            var stringArray = new Uint8Array(str.length + ((nullTermination) ? 1 : 0));
+            for (var i = 0; i < str.length; i++)
+                stringArray[i] = str.charCodeAt(i);
 
-        public WriteWString(wstr: string, nullTerminating = true) {
-        
-        }
+            if (nullTermination)
+                stringArray[str.length] = nullTerminator;
 
-        public WriteBuffer(buffer: Uint8Array, len: number) {
-        
+            this.WriteBytes(stringArray);
+
+            if (forceLen > 0)
+            {
+                forceLen -= str.length;
+                var nullTerminatorArray = new Uint8Array(forceLen);
+                for (var i = 0; i < forceLen; i++)
+                    nullTerminatorArray[i] = nullTerminator;
+
+                this.WriteBytes(nullTerminatorArray);
+            }
         }
 
         private reverseByteArray(array: Uint8Array): Uint8Array {
