@@ -236,22 +236,29 @@ module XboxInternals.IO {
 		public Save(fileName: string) {
 			// Creates blob from the arraybuffer.
 			var blob = new Blob([this.buffer], { type: "application/octet-stream" });
-			// Create download link to invok click on.
-			var downloadLink = <any>document.createElement("a");
-			downloadLink.download = fileName;
-			// Set href to the Object URL from the Blob.
-			if ((<any>window).webkitURL != null) {
-				downloadLink.href = (<any>window).webkitURL.createObjectURL(blob)
+
+			// Save blob exists, Save the File using function.
+			if (navigator.msSaveBlob) {
+				navigator.msSaveBlob(blob, fileName);
 			} else {
-				downloadLink.href = (<any>window).URL.createObjectURL(blob);
-				downloadLink.onclick = (event) => {
-					document.body.removeChild(event.target);
-				};
-				downloadLink.style.display = "none";
-				document.body.appendChild(downloadLink);
+
+				// Create download link to invok click on.
+				var downloadLink = <any>document.createElement("a");
+				downloadLink.download = fileName;
+				// Set href to the Object URL from the Blob.
+				if ((<any>window).webkitURL != null) {
+					downloadLink.href = (<any>window).webkitURL.createObjectURL(blob)
+				} else {
+					downloadLink.href = (<any>window).URL.createObjectURL(blob);
+					downloadLink.onclick = (event) => {
+						document.body.removeChild(event.target);
+					};
+					downloadLink.style.display = "none";
+					document.body.appendChild(downloadLink);
+				}
+				// Invoke click to download.
+				downloadLink.click();
 			}
-			// Invoke click to download.
-			downloadLink.click();
 		}
 	}
 
