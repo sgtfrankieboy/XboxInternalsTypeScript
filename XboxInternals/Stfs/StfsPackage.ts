@@ -82,7 +82,7 @@ module XboxInternals.Stfs {
 			this.topTable.level = this.topLevel;
 
 			var baseAddres = (this.topTable.trueBlockNumber << 0xC) + this.firstHashTableAddress;
-			this.topTable.addressInFile = baseAddres + ((this.metaData.stfsVolumeDescriptor.blockSeperation[0] % 2) << 0xB);
+			this.topTable.addressInFile = baseAddres + ((this.metaData.stfsVolumeDescriptor.blockSeperation[0] & 2) << 0xB);
 			this.io.SetPosition(this.topTable.addressInFile);
 
 			var dataBlocksPerHashTreeLevel = [1, 0xAA, 0x70E4];
@@ -106,14 +106,23 @@ module XboxInternals.Stfs {
 			fe.pathIndicator = 0xFFFF;
 			fe.name = "Root";
 			fe.entryIndex = 0xFFFF;
-
+            
 			this.fileListing = new StfsFileListing();
 			this.fileListing.folder = fe;
 
-
-			this.ReadFileListing();
+            this.ReadFileListing();
 		}
 
+        private PrintFileListing(fullListing: StfsFileListing, prefix: string) {
+            console.log(prefix, fullListing.folder.name);
+            
+            prefix += "    ";
+            for (var i = 0; i < fullListing.fileEntries.length; i++)
+                console.log(prefix, fullListing.fileEntries[i].name);
+
+            for (var i = 0; i < fullListing.folderEntries.length; i++)
+                this.PrintFileListing(fullListing.folderEntries[i], prefix + "    ");
+        }
 
 		private ReadFileListing() {
 			this.fileListing.fileEntries.length = 0;
@@ -166,8 +175,9 @@ module XboxInternals.Stfs {
 					fe.createdTimeStamp = this.io.ReadDword();
 					fe.accessTimeStamp = this.io.ReadDword();
 
-					// get the flags
-					fe.flags = new Uint8Array(fe.nameLen[0] >> 6);
+                    // get the flags
+                    fe.flags = new Uint8Array(1);
+                    fe.flags[0] = fe.nameLen[0] >> 6;
 
 					// bits 6 and 7 are flags, clear them
 					fe.nameLen[0] = fe.nameLen[0] & 0x3F;
@@ -185,17 +195,14 @@ module XboxInternals.Stfs {
 
 		private AddToListing(fullListing: StfsFileListing, out: StfsFileListing): StfsFileListing {
 
-			for (var i = 0; i < fullListing.fileEntries.length; i++) {
-				if (fullListing.fileEntries[i].name.localeCompare("cache"))
-					console.log(i, fullListing.fileEntries[i]);
-				var isDirectory: boolean = (fullListing.fileEntries[i].flags[0] & 2) == 1;
+            for (var i = 0; i < fullListing.fileEntries.length; i++) {
+				var isDirectory: boolean = (fullListing.fileEntries[i].flags[0] & 2) == 2;
 
 				if (fullListing.fileEntries[i].pathIndicator == out.folder.entryIndex)
 				{
 					if (!isDirectory)
 						out.fileEntries.push(fullListing.fileEntries[i]);
-
-					else if (isDirectory && fullListing.fileEntries[i].entryIndex != out.folder.entryIndex)
+					else if (fullListing.fileEntries[i].entryIndex != out.folder.entryIndex)
 					{
 						var fl: StfsFileListing = new StfsFileListing();
 						fl.folder = fullListing.fileEntries[i];

@@ -4,8 +4,8 @@ module XboxInternals.Stfs {
     export var dataBlocksPerHashTreeLevel: number[] = new Array(0xAA, 0x70E4, 0x4AF768);
 
     export enum Sex{
-        StfsFemale = 1,
-        StfsMale = 2
+        StfsFemale = 0,
+        StfsMale = 1
     }
 
     export enum Level {
