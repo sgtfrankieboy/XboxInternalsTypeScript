@@ -1,0 +1,140 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <ProjectGuid>{CA226DCC-4E35-438B-9EF0-B28F3B1771E9}</ProjectGuid>
+    <ProjectTypeGuids>{349c5851-65df-11da-9384-00065b846f21};{fae04ec0-301f-11d3-bf4b-00c04f79efbc}</ProjectTypeGuids>
+    <OutputType>Library</OutputType>
+    <OutputPath>bin</OutputPath>
+    <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
+    <DebugType>full</DebugType>
+    <DebugSymbols>true</DebugSymbols>
+    <UseIISExpress>true</UseIISExpress>
+    <IISExpressSSLPort />
+    <IISExpressAnonymousAuthentication />
+    <IISExpressWindowsAuthentication />
+    <IISExpressUseClassicPipelineMode />
+  </PropertyGroup>
+  <ItemGroup>
+    <Content Include="app.css" />
+    <Content Include="app.min.js">
+      <DependentUpon>app.ts</DependentUpon>
+    </Content>
+    <Content Include="AvatarAssets\AvatarAssetDefinitions.js">
+      <DependentUpon>AvatarAssetDefinitions.ts</DependentUpon>
+    </Content>
+    <Content Include="AvatarAssets\AvatarAssetDefinitions.min.js">
+      <DependentUpon>AvatarAssetDefinitions.ts</DependentUpon>
+    </Content>
+    <Content Include="AvatarAssets\AvatarAssetDefinitions.ts" />
+    <Content Include="default.htm" />
+    <Content Include="app.js">
+      <DependentUpon>app.ts</DependentUpon>
+    </Content>
+    <Content Include="IO\BaseIO.js">
+      <DependentUpon>BaseIO.ts</DependentUpon>
+    </Content>
+    <Content Include="IO\BaseIO.min.js">
+      <DependentUpon>BaseIO.ts</DependentUpon>
+    </Content>
+    <Content Include="IO\BaseIO.ts" />
+    <Content Include="IO\FileIO.js">
+      <DependentUpon>FileIO.ts</DependentUpon>
+    </Content>
+    <Content Include="IO\FileIO.min.js">
+      <DependentUpon>FileIO.ts</DependentUpon>
+    </Content>
+    <Content Include="IO\FileIO.ts" />
+    <Content Include="Stfs\StfsConstants.js">
+      <DependentUpon>StfsConstants.ts</DependentUpon>
+    </Content>
+    <Content Include="Stfs\StfsConstants.min.js">
+      <DependentUpon>StfsConstants.ts</DependentUpon>
+    </Content>
+    <Content Include="Stfs\StfsConstants.ts" />
+    <Content Include="Stfs\StfsDefinitions.js">
+      <DependentUpon>StfsDefinitions.ts</DependentUpon>
+    </Content>
+    <Content Include="Stfs\StfsDefinitions.min.js">
+      <DependentUpon>StfsDefinitions.ts</DependentUpon>
+    </Content>
+    <Content Include="Stfs\StfsDefinitions.ts" />
+    <Content Include="Stfs\StfsPackage.js">
+      <DependentUpon>StfsPackage.ts</DependentUpon>
+    </Content>
+    <Content Include="Stfs\StfsPackage.min.js">
+      <DependentUpon>StfsPackage.ts</DependentUpon>
+    </Content>
+    <Content Include="Stfs\StfsPackage.ts" />
+    <Content Include="Stfs\XContentHeader.js">
+      <DependentUpon>XContentHeader.ts</DependentUpon>
+    </Content>
+    <Content Include="Stfs\XContentHeader.min.js">
+      <DependentUpon>XContentHeader.ts</DependentUpon>
+    </Content>
+    <Content Include="Stfs\XContentHeader.ts" />
+  </ItemGroup>
+  <ItemGroup>
+    <TypeScriptCompile Include="app.ts" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="app.js.map">
+      <DependentUpon>app.ts</DependentUpon>
+    </Content>
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="Stfs\XContentHeader.js.map">
+      <DependentUpon>XContentHeader.ts</DependentUpon>
+    </Content>
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="IO\BaseIO.js.map">
+      <DependentUpon>BaseIO.ts</DependentUpon>
+    </Content>
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="Stfs\StfsPackage.js.map">
+      <DependentUpon>StfsPackage.ts</DependentUpon>
+    </Content>
+  </ItemGroup>
+  <PropertyGroup>
+    <VisualStudioVersion Condition="'$(VisualStudioVersion)' == ''">10.0</VisualStudioVersion>
+    <VSToolsPath Condition="'$(VSToolsPath)' == ''">$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)</VSToolsPath>
+  </PropertyGroup>
+  <PropertyGroup>
+    <RootNamespace>XboxInternals</RootNamespace>
+  </PropertyGroup>
+  <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
+  <Import Project="$(VSToolsPath)\WebApplications\Microsoft.WebApplication.targets" Condition="'$(VSToolsPath)' != ''" />
+  <ProjectExtensions>
+    <VisualStudio>
+      <FlavorProperties GUID="{349c5851-65df-11da-9384-00065b846f21}">
+        <WebProjectProperties>
+          <UseIIS>True</UseIIS>
+          <AutoAssignPort>True</AutoAssignPort>
+          <DevelopmentServerPort>0</DevelopmentServerPort>
+          <DevelopmentServerVPath>/</DevelopmentServerVPath>
+          <IISUrl>http://localhost:11792/</IISUrl>
+          <NTLMAuthentication>False</NTLMAuthentication>
+          <UseCustomServer>False</UseCustomServer>
+          <CustomServerUrl>
+          </CustomServerUrl>
+          <SaveServerSettingsInUserFile>False</SaveServerSettingsInUserFile>
+        </WebProjectProperties>
+      </FlavorProperties>
+    </VisualStudio>
+  </ProjectExtensions>
+  <PropertyGroup Condition="'$(Configuration)' == 'Debug'">
+    <TypeScriptTarget>ES5</TypeScriptTarget>
+    <TypeScriptIncludeComments>true</TypeScriptIncludeComments>
+    <TypeScriptSourceMap>true</TypeScriptSourceMap>
+    <TypeScriptModuleKind>AMD</TypeScriptModuleKind>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)' == 'Release'">
+    <TypeScriptTarget>ES5</TypeScriptTarget>
+    <TypeScriptIncludeComments>false</TypeScriptIncludeComments>
+    <TypeScriptSourceMap>false</TypeScriptSourceMap>
+    <TypeScriptModuleKind>AMD</TypeScriptModuleKind>
+  </PropertyGroup>
+  <Import Project="$(VSToolsPath)\TypeScript\Microsoft.TypeScript.targets" />
+</Project>
