@@ -10,9 +10,9 @@ module XboxInternals.Stfs {
 
 	export class StfsPackage {
 
-		
+
 		static INT24_MAX = 8388607;
-		
+
 		public metaData: XContentHeader;
 		private fileListing: StfsFileListing;
 		private writtenToFile: StfsFileListing;
@@ -46,7 +46,6 @@ module XboxInternals.Stfs {
 
 		private Parse() {
 			this.metaData = new XContentHeader(this.io, (this.flags & StfsPackageFlags.StfsPackagePEC));
-			console.log(this.metaData);
 
 			if (this.metaData.fileSystem != FileSystem.FileSystemSTFS && (this.flags & StfsPackageFlags.StfsPackagePEC) == 0)
 				throw "STFS: Invalid file system header.";
@@ -106,23 +105,23 @@ module XboxInternals.Stfs {
 			fe.pathIndicator = 0xFFFF;
 			fe.name = "Root";
 			fe.entryIndex = 0xFFFF;
-            
+
 			this.fileListing = new StfsFileListing();
 			this.fileListing.folder = fe;
 
-            this.ReadFileListing();
+			this.ReadFileListing();
 		}
 
-        private PrintFileListing(fullListing: StfsFileListing, prefix: string) {
-            console.log(prefix, fullListing.folder.name);
-            
-            prefix += "    ";
-            for (var i = 0; i < fullListing.fileEntries.length; i++)
-                console.log(prefix, fullListing.fileEntries[i].name);
+		private PrintFileListing(fullListing: StfsFileListing, prefix: string) {
+			console.log(prefix, fullListing.folder.name);
 
-            for (var i = 0; i < fullListing.folderEntries.length; i++)
-                this.PrintFileListing(fullListing.folderEntries[i], prefix + "    ");
-        }
+			prefix += "    ";
+			for (var i = 0; i < fullListing.fileEntries.length; i++)
+				console.log(prefix, fullListing.fileEntries[i].name);
+
+			for (var i = 0; i < fullListing.folderEntries.length; i++)
+				this.PrintFileListing(fullListing.folderEntries[i], prefix + "    ");
+		}
 
 		private ReadFileListing() {
 			this.fileListing.fileEntries.length = 0;
@@ -153,7 +152,7 @@ module XboxInternals.Stfs {
 
 					// read the name, if the length is 0 then break
 					fe.name = this.io.ReadString(0x28);
-
+					var lengthy = fe.name.length;
 					// read the name Length
 					fe.nameLen = this.io.ReadByte();
 
@@ -163,7 +162,7 @@ module XboxInternals.Stfs {
 					}
 					else if (fe.name.length == 0)
 						break;
-					
+
 					// check for a mismatch inthe total allocated blocks for the file
 					fe.blocksForFile = this.io.ReadInt24(IO.EndianType.LittleEndian);
 					this.io.SetPosition(this.io.GetPosition() + 3);
@@ -175,9 +174,9 @@ module XboxInternals.Stfs {
 					fe.createdTimeStamp = this.io.ReadDword();
 					fe.accessTimeStamp = this.io.ReadDword();
 
-                    // get the flags
-                    fe.flags = new Uint8Array(1);
-                    fe.flags[0] = fe.nameLen[0] >> 6;
+					// get the flags
+					fe.flags = new Uint8Array(1);
+					fe.flags[0] = fe.nameLen[0] >> 6;
 
 					// bits 6 and 7 are flags, clear them
 					fe.nameLen[0] = fe.nameLen[0] & 0x3F;
@@ -195,7 +194,7 @@ module XboxInternals.Stfs {
 
 		private AddToListing(fullListing: StfsFileListing, out: StfsFileListing): StfsFileListing {
 
-            for (var i = 0; i < fullListing.fileEntries.length; i++) {
+			for (var i = 0; i < fullListing.fileEntries.length; i++) {
 				var isDirectory: boolean = (fullListing.fileEntries[i].flags[0] & 2) == 2;
 
 				if (fullListing.fileEntries[i].pathIndicator == out.folder.entryIndex)
@@ -320,7 +319,91 @@ module XboxInternals.Stfs {
 				nextBlock: this.io.ReadInt24()
 			};
 		}
-	}      
+
+		public GetFileEntryFromPath(pathInPackage: string, checkFolders: boolean = false, newEntry: StfsFileEntry = null): StfsFileEntry {
+			var entry = this.GetFileEntry(pathInPackage.split('\\'), this.fileListing, newEntry, (newEntry != null), checkFolders);
+
+			if (entry.nameLen[0] == 0)
+				throw "STFS: File entry " + pathInPackage + " cannot be found in the package.";
+
+			return entry;
+		}
+
+
+		public GetFileEntry(locationOfFile: string[], start: StfsFileListing, newEntry: StfsFileEntry = null, updateEntry: boolean = false, checkFolders: boolean = false): StfsFileEntry {
+
+			if (locationOfFile.length == 1) {
+
+				for (var i = 0; i < start.fileEntries.length; i++) {
+					if (start.fileEntries[i].name == locationOfFile[0]) {
+
+						if (updateEntry)
+						{
+							start.fileEntries[i] = newEntry;
+							this.io.SetPosition(start.fileEntries[i].fileEntryAddress);
+							this.WriteFileEntry(start.fileEntries[i]);
+						}
+
+						return start.fileEntries[i];
+					}
+				}
+
+				if (checkFolders) {
+					for (var i = 0; i < start.folderEntries.length; i++) {
+
+						if (start.folderEntries[i].folder.name == locationOfFile[0]) {
+							if (updateEntry) {
+								start.folderEntries[i].folder = newEntry;
+								this.io.SetPosition(start.folderEntries[i].folder.fileEntryAddress);
+								this.WriteFileEntry(start.folderEntries[i].folder);
+							}
+
+							return start.folderEntries[i].folder;
+						}
+					}
+				}
+			} else {
+				for (var i = 0; i < start.folderEntries.length; i++) {
+					if (start.folderEntries[i].folder.name == locationOfFile[0]) {
+						var index = locationOfFile.indexOf(locationOfFile[0], 0);
+						if (index != undefined)
+							locationOfFile.splice(index, 1);
+
+						return this.GetFileEntry(locationOfFile, start.folderEntries[i], newEntry, updateEntry, checkFolders);
+					}
+				}
+			}
+
+			var nullEntry = new StfsFileEntry();
+			nullEntry.nameLen = new Uint8Array([0]);
+			return nullEntry;
+		}
+
+
+		public WriteFileEntry(entry: StfsFileEntry) {
+			entry.nameLen = new Uint8Array([entry.name.length]);
+
+			if (entry.nameLen[0] > 0x28)
+				throw "STFS: File entry name length cannot be  greater than 40(0x28) characters.";
+
+			var nameLengthAndFlags = entry.nameLen[0] | (entry.flags[0] << 6);
+
+			var orig = this.io.GetEndian();
+			this.io.SetEndian(IO.EndianType.BigEndian);
+
+			this.io.WriteString(entry.name, 0x28, false);
+			this.io.WriteByte(new Uint8Array([nameLengthAndFlags]));
+			this.io.WriteInt24(entry.blocksForFile, IO.EndianType.LittleEndian);
+			this.io.WriteInt24(entry.blocksForFile, IO.EndianType.LittleEndian);
+			this.io.WriteInt24(entry.startingBlockNum, IO.EndianType.LittleEndian);
+			this.io.WriteWord(entry.pathIndicator);
+			this.io.WriteDword(entry.fileSize);
+			this.io.WriteDword(entry.createdTimeStamp);
+			this.io.WriteDword(entry.accessTimeStamp);
+
+			this.io.SetEndian(orig);
+		}
+	}
 
 
 	export class StfsFileEntry {

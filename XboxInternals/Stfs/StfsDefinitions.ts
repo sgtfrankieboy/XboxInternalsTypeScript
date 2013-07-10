@@ -162,18 +162,12 @@ module XboxInternals.Stfs {
 
 		public ReadCertificateEx(io: IO.BaseIO, address: number): Certificate {
 			io.SetPosition(address);
-			console.log(io.GetPosition());
 
 			var publicKeyCertifcateSize = io.ReadWord();
-			console.log(io.GetPosition());
 			var ownerConsoleID = io.ReadBytes(0x5);
-
-			console.log(io.GetPosition());
 			var ownerConsolePartNumber = io.ReadString(0x11);
-			console.log(io.GetPosition());
 
 			var temp = io.ReadDword();
-			console.log(temp);
 			var ownerConsoleType = <ConsoleType>(temp & 3);
 			var consoleTypeFlags = <ConsoleTypeFlags>(temp & 0xFFFFFFFC);
 			if (ownerConsoleType != ConsoleType.DevKit && ownerConsoleType != ConsoleType.Retail)

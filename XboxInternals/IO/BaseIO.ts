@@ -77,7 +77,7 @@ module XboxInternals.IO {
 			if (et != EndianType.Default)
 				this.byteOrder = et;
 
-			var returnVal = this.ReadInt32();
+			var returnVal = this.ReadDword();
 
 			if (this.byteOrder == EndianType.BigEndian)
 				returnVal = (returnVal & 0xFFFFFF00) >> 8;
@@ -90,6 +90,7 @@ module XboxInternals.IO {
 			return returnVal;
 		}
 
+		
 		public ReadInt32(): number {
 			return this.ReadDword();
 		}
@@ -126,7 +127,14 @@ module XboxInternals.IO {
 		}
 
 		public ReadString(len = -1, nullTerminiator = 0, forceInclude0 = true, maxLength = 0x7FFFFFFF): string {
-			var val = String.fromCharCode.apply(null, new Uint8Array(this.buffer, this._position, len));
+
+			var stringBytes = new Uint8Array(this.buffer, this._position, len);
+			var i = 0;
+			for (; i < stringBytes.length; i++)
+				if (stringBytes[i] == 0)
+					break;
+
+			var val = String.fromCharCode.apply(null, new Uint8Array(this.buffer, this._position, i));
 			this.SetPosition(this.GetPosition() + len);
 			return val;
 		}
@@ -159,7 +167,13 @@ module XboxInternals.IO {
 		public WriteWord(word: number) {
 			var view = new DataView(this.buffer, this._position, 2);
 			view.setInt16(0, word, this.byteOrder == 1);
-			this.SetPosition(this.GetPosition() + 1);
+			this.SetPosition(this.GetPosition() + 2);
+		}
+
+		public WriteDword(dword: number) {
+			var view = new DataView(this.buffer, this._position, 4);
+			view.setInt32(0, dword, this.byteOrder == 1);
+			this.SetPosition(this.GetPosition() + 4);
 		}
 
 		public WriteInt24(i24: number, et: EndianType = EndianType.Default) {
