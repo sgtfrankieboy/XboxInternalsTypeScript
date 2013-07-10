@@ -16,6 +16,7 @@ module XboxInternals.IO {
 
 		constructor(buffer: ArrayBuffer) {
 			this.buffer = buffer;
+			this.SetPosition(0);
 		}
 
 		public SetEndian(byteOrder: EndianType) {

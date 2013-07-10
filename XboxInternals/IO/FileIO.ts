@@ -25,5 +25,13 @@ module XboxInternals.IO {
 			// Saves the file with the original file name.
 			this.Save(this.fileName);
 		}
+
+		public SetFileName(name: string) {
+			this.fileName = name;
+		}
+
+		public GetFileName(): string {
+			return this.fileName;
+		}
 	}
 }

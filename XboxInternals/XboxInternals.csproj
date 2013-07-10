@@ -102,6 +102,9 @@
     <Content Include="IO\FileIO.js.map">
       <DependentUpon>FileIO.ts</DependentUpon>
     </Content>
+    <Content Include="Stfs\StfsDefinitions.js.map">
+      <DependentUpon>StfsDefinitions.ts</DependentUpon>
+    </Content>
     <None Include="web.Debug.config">
       <DependentUpon>web.config</DependentUpon>
     </None>

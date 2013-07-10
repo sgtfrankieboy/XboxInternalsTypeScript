@@ -1,4 +1,5 @@
 ﻿/// <reference path='../IO/BaseIO.ts' />
+/// <reference path='../IO/FileIO.ts' />
 /// <reference path='StfsConstants.ts' />
 /// <reference path='StfsDefinitions.ts' />
 /// <reference path='XContentHeader.ts' />
@@ -402,6 +403,133 @@ module XboxInternals.Stfs {
 			this.io.WriteDword(entry.accessTimeStamp);
 
 			this.io.SetEndian(orig);
+		}
+
+		private ExtractBlock(blockNum: number, length: number = 0x1000): Uint8Array {
+			if (blockNum >= this.metaData.stfsVolumeDescriptor.allocatedBlockCount)
+				throw "STFS: Reference to illegal block number.";
+			if (length > 0x1000)
+				throw "STFS: length cannot be greater 0x1000";
+
+			this.io.SetPosition(this.BlockToAddress(blockNum));
+			return this.io.ReadBytes(length);
+		}
+
+		public ExtractFileFromPath(pathInPackage: string, onProgress: (extractProgress: number) => any = null): IO.FileIO {
+			var entry = this.GetFileEntryFromPath(pathInPackage);
+			return this.ExtractFile(entry, onProgress);
+		}
+
+		public ExtractFile(entry: StfsFileEntry, onProgress: (extractProgress: number) => any = null): IO.FileIO {
+			if (entry.nameLen[0] == 0)
+				throw "STFS: File '" + entry.name + "' doesn't exist in the package.";
+
+			var fileSize = entry.fileSize;
+
+			var fileIO = new IO.FileIO(new ArrayBuffer(fileSize));
+			fileIO.SetFileName(entry.name);
+			
+			if (fileSize == 0)
+			{
+				if (onProgress != null)
+					onProgress(100);
+				return fileIO;
+			}
+
+
+			if ((entry.flags[0] & 1) == 1) {
+
+				var buffer = new ArrayBuffer(fileSize);
+				
+				var startAddress = this.BlockToAddress(entry.startingBlockNum);
+				this.io.SetPosition(startAddress);
+
+				var blockCount = (this.ComputeLevel0BackingHashBlockNumber(entry.startingBlockNum) + this.blockStep[0]) - ((startAddress - this.firstHashTableAddress) >> 0xC);
+
+				if (entry.blocksForFile <= blockCount) {
+					fileIO.WriteBytes(this.io.ReadBytes(entry.fileSize));
+
+					if (onProgress != null)
+						onProgress(100);
+
+					return fileIO;
+				} else {
+					fileIO.WriteBytes(this.io.ReadBytes(blockCount << 0xC));
+
+					if (onProgress != null)
+						onProgress(Math.round((100 / entry.blocksForFile) * blockCount));
+
+				}
+
+				var tempSize = (entry.fileSize - (blockCount << 0xC));
+				while (tempSize >= 0xAA000)
+				{
+					var currentPos = this.io.GetPosition();
+					this.io.SetPosition(currentPos + this.GetHashTableSkipSize(currentPos));
+
+					fileIO.WriteBytes(this.io.ReadBytes(0xAA000));
+
+					tempSize -= 0xAA000;
+					blockCount += 0xAA;
+
+					if (onProgress != null)
+						onProgress(Math.round((100 / entry.blocksForFile) * blockCount));
+				}
+
+				if (tempSize != 0) {
+					
+					var currentPos = this.io.GetPosition();
+					this.io.SetPosition(currentPos + this.GetHashTableSkipSize(currentPos));
+
+					fileIO.WriteBytes(this.io.ReadBytes(tempSize));
+
+					if (onProgress != null)
+						onProgress(100);
+				}
+
+				return fileIO;
+			} else {
+				var fullReadCounts = Math.floor(fileSize / 0x1000);
+				fileSize -= (fullReadCounts * 0x1000);
+
+				var block = entry.startingBlockNum;
+
+				for (var i = 0; i < fullReadCounts; i++) {
+					fileIO.WriteBytes(this.ExtractBlock(block));
+
+					block = this.GetBlockHashEntry(block).nextBlock;
+
+					if (onProgress != null)
+						onProgress(Math.round((100 / entry.blocksForFile) * (i + 1)));
+				}
+
+				if (fileSize != 0) {
+					fileIO.WriteBytes(this.ExtractBlock(block, fileSize));
+
+					if (onProgress != null)
+						onProgress(100);
+				}
+
+				return fileIO;
+			}
+		}
+
+		public GetHashTableSkipSize(tableAddress: number): number {
+			
+			var trueBlockNumber = (tableAddress - this.firstHashTableAddress) >> 0xC;
+
+			if (trueBlockNumber == 0)
+				return (0x1000 << this.packageSex);
+
+			if (trueBlockNumber == this.blockStep[1])
+				return (0x3000 << this.packageSex);
+			else if (trueBlockNumber > this.blockStep[1])
+				trueBlockNumber -= (this.blockStep[1] + (1 << this.packageSex));
+
+			if (trueBlockNumber == this.blockStep[0] || trueBlockNumber % this.blockStep[1] == 0)
+				return (0x2000 << this.packageSex);
+
+			return (0x1000 << this.packageSex);
 		}
 	}
 
