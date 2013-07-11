@@ -198,9 +198,7 @@ module XboxInternals.Stfs {
 					fe.flags[0] = fe.nameLen[0] >> 6;
 
 					// bits 6 and 7 are flags, clear them
-					//fe.nameLen[0] = fe.nameLen[0] & 0x3F;
 					fe.nameLen[0] &= 0x3F;
-					fe.nameLen[0] = 0xFF;
 
 					var debugPoint = "";
 					fl.fileEntries.push(fe);
