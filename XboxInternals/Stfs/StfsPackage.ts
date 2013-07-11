@@ -113,7 +113,24 @@ module XboxInternals.Stfs {
 			this.ReadFileListing();
 		}
 
-		private PrintFileListing(fullListing: StfsFileListing, prefix: string) {
+		private PrintFileListing(fullListing: StfsFileListing = null, prefix: string = "") {
+			if (fullListing == null)
+				fullListing = this.fileListing;
+
+			console.log(prefix, fullListing.folder.name);
+
+			prefix += "    ";
+			for (var i = 0; i < fullListing.fileEntries.length; i++)
+				console.log(prefix, fullListing.fileEntries[i].name);
+
+			for (var i = 0; i < fullListing.folderEntries.length; i++)
+				this.PrintFileListing(fullListing.folderEntries[i], prefix + "    ");
+		}
+
+		private PrintFileListingExtended(fullListing: StfsFileListing = null, prefix: string = "") {
+			if (fullListing == null)
+				fullListing = this.fileListing;
+
 			console.log(prefix, fullListing.folder.name);
 
 			prefix += "    ";
@@ -137,6 +154,7 @@ module XboxInternals.Stfs {
 
 			var fl: StfsFileListing = new StfsFileListing();
 			var currentAddr: number;
+
 
 			for (var x = 0; x < this.metaData.stfsVolumeDescriptor.fileTableBlockCount; x++) {
 				currentAddr = this.BlockToAddress(block);
@@ -180,9 +198,11 @@ module XboxInternals.Stfs {
 					fe.flags[0] = fe.nameLen[0] >> 6;
 
 					// bits 6 and 7 are flags, clear them
-					fe.nameLen[0] = fe.nameLen[0] & 0x3F;
+					//fe.nameLen[0] = fe.nameLen[0] & 0x3F;
+					fe.nameLen[0] &= 0x3F;
+					fe.nameLen[0] = 0xFF;
 
-
+					var debugPoint = "";
 					fl.fileEntries.push(fe);
 				}
 
@@ -531,6 +551,385 @@ module XboxInternals.Stfs {
 
 			return (0x1000 << this.packageSex);
 		}
+
+		public FileExists(pathInPackage: string): boolean {
+			var entry = this.GetFileEntry(pathInPackage.split('\\'), this.fileListing);
+			return (entry.nameLen[0] != 0);
+		}
+
+		public InjectFile(input: IO.FileIO, pathInPackage: string, onProgress: (progress: number) => any = null) {
+			if (this.FileExists(pathInPackage))
+				throw "STFS: File already exists in the package.";
+
+			var split: string[] = pathInPackage.split("\\");
+			var folder: StfsFileListing;
+
+			var size = split.length;
+			var fileName: string;
+			if (size > 1) {
+				fileName = split[size - 1];
+				split = split.slice(size - 1, 1);
+
+				folder = this.FindDirectoryListing(split, this.fileListing);
+				if (folder == null)
+					throw "STFS: The given folder could not be found.";
+			} else {
+				fileName = pathInPackage;
+				folder = this.fileListing;
+			}
+
+			var fileSize = input.buffer.byteLength;
+
+			var entry: StfsFileEntry = new StfsFileEntry();
+			entry.name = fileName;
+
+			if (fileName.length >= 0x28)
+				throw "STFS: file entry name length cannot be greater than 40(0x28) characters.";
+
+			entry.fileSize = fileSize;
+			entry.flags = new Uint8Array([FileEntryFlags.ConsecutiveBlocks]);
+			entry.pathIndicator = folder.folder.entryIndex;
+			entry.startingBlockNum = StfsPackage.INT24_MAX;
+			entry.blocksForFile = ((fileSize + 0xFFF) & 0xFFFFFFF000) >> 0xC;
+			entry.createdTimeStamp = Date.now();
+			entry.accessTimeStamp = entry.createdTimeStamp;
+
+
+			var block = 0;
+			var prevBlock = StfsPackage.INT24_MAX;
+			var counter = 0;
+			var data = new Uint8Array(0x1000);
+			while (fileSize >= 0x1000) {
+				block = this.AllocateBlock();
+
+				if (entry.startingBlockNum == StfsPackage.INT24_MAX)
+					entry.startingBlockNum = block;
+
+				if (prevBlock != StfsPackage.INT24_MAX)
+					this.SetNextBlock(prevBlock, block);
+
+
+				prevBlock = block;
+
+				this.io.SetPosition(this.BlockToAddress(block));
+				this.io.WriteBytes(input.ReadBytes(0x1000));
+
+				fileSize -= 0x1000;
+
+				if (onProgress)
+					onProgress(Math.round((100 / entry.blocksForFile) * ++counter));
+			}
+
+			if (fileSize != 0) {
+				block = this.AllocateBlock();
+
+				if (entry.startingBlockNum == StfsPackage.INT24_MAX)
+					entry.startingBlockNum = block;
+
+				if (prevBlock != StfsPackage.INT24_MAX)
+					this.SetNextBlock(prevBlock, block);
+
+				this.io.SetPosition(this.BlockToAddress(block));
+				this.io.WriteBytes(input.ReadBytes(fileSize));
+
+				fileSize = 0;
+
+				if (onProgress)
+					onProgress(100);
+
+			}
+
+			this.SetNextBlock(block, StfsPackage.INT24_MAX);
+
+			folder.fileEntries.push(entry);
+			this.WriteFileListing();
+
+			if (this.topLevel == Level.Zero) {
+				this.io.SetPosition(this.topTable.addressInFile);
+
+				this.topTable.entryCount = this.metaData.stfsVolumeDescriptor.allocatedBlockCount;
+
+				for (var i = 0; i < this.topTable.entryCount; i++)
+				{
+					this.topTable.entries[i].blockHash = this.io.ReadBytes(0x14);
+					this.topTable.entries[i].status = this.io.ReadByte();
+					this.topTable.entries[i].nextBlock = this.io.ReadInt24();
+				}
+			}
+
+			return entry;
+
+		}
+
+		public WriteFileListing(usePassed?: boolean, outFis?: StfsFileEntry[], outFos?: StfsFileEntry[]) {
+			
+			var outFiles: StfsFileEntry[];
+			var outFolders: StfsFileEntry[];
+
+			if (!usePassed) {
+				var temp = this.GenerateRawFileListing(this.fileListing, [], []);
+				outFiles = temp.outFiles;
+				outFolders = temp.outFolders;
+			}
+
+			outFolders = outFolders.splice(1);
+
+			var folders: { [s: number]: number; } = {};
+			folders[0xFFFF] = 0xFFFF;
+
+			var alwaysAllocate = false;
+			var firstCheck = true;
+
+			var block = this.metaData.stfsVolumeDescriptor.fileTableBlockNum;
+			this.io.SetPosition(this.BlockToAddress(block));
+
+			var outFileSize = outFolders.length;
+
+			for (var i = 0; i < outFileSize; i++)
+				folders[outFolders[i].entryIndex] = i;
+
+			for (var i = 0; i < outFolders.length; i++) {
+				if (firstCheck)
+					firstCheck = true;
+				else if ((i + 1) % 0x40 == 0) {
+					var nextBlock: number;
+					if (alwaysAllocate) {
+						nextBlock = this.AllocateBlock();
+
+						this.SetNextBlock(block, nextBlock);
+					} else {
+						nextBlock = this.GetBlockHashEntry(block).nextBlock;
+
+						if (nextBlock == StfsPackage.INT24_MAX) {
+							nextBlock = this.AllocateBlock();
+							this.SetNextBlock(block, nextBlock);
+							alwaysAllocate = true;
+						}
+					}
+
+					block = nextBlock;
+					this.io.SetPosition(this.BlockToAddress(block));
+				}
+
+				outFolders[i].pathIndicator = folders[outFolders[i].pathIndicator];
+
+				this.WriteFileEntry(outFolders[i]);
+			}
+
+			var outFoldersAndFilesSize = outFileSize + outFiles.length;
+			for (var i = outFileSize; i < outFoldersAndFilesSize; i++) {
+				if (firstCheck)
+					firstCheck = true;
+				else if ((i + 1) % 0x40 == 0) {
+					var nextBlock: number;
+					if (alwaysAllocate) {
+						nextBlock = this.AllocateBlock();
+
+						this.SetNextBlock(block, nextBlock);
+					} else {
+						nextBlock = this.GetBlockHashEntry(block).nextBlock;
+
+						if (nextBlock == StfsPackage.INT24_MAX) {
+							nextBlock = this.AllocateBlock();
+							this.SetNextBlock(block, nextBlock);
+							alwaysAllocate = true;
+						}
+					}
+
+					block = nextBlock;
+					this.io.SetPosition(this.BlockToAddress(block));
+				}
+
+				outFiles[i - outFileSize].pathIndicator = folders[outFiles[i - outFileSize].pathIndicator];
+				this.WriteFileEntry(outFiles[i - outFileSize]);
+			}
+
+			var remainingEntries = (outFoldersAndFilesSize % 0x40);
+			var remainer = 0;
+			if (remainingEntries > 0)
+				remainer = (0x40 - remainingEntries) * 0x40;
+			var nullBytes = new Uint8Array(remainer);
+			this.io.WriteBytes(nullBytes);
+
+			this.metaData.stfsVolumeDescriptor.fileTableBlockCount = Math.floor(outFoldersAndFilesSize / 0x40) + 1;
+			if (outFoldersAndFilesSize % 0x40 == 0 && outFoldersAndFilesSize != 0)
+				this.metaData.stfsVolumeDescriptor.fileTableBlockCount--;
+			this.metaData.WriteVolumeDescriptor();
+
+			this.ReadFileListing();
+		}
+
+		public GenerateRawFileListing(fl: StfsFileListing, outFiles: StfsFileEntry[], outFolders: StfsFileEntry[]): any {
+			var fiEntries = fl.fileEntries.length;
+			var foEntries = fl.folderEntries.length;
+			for (var i = 0; i < fiEntries; i++) {
+				outFiles.push(fl.fileEntries[i]);
+			}
+
+			outFolders.push(fl.folder);
+
+			for (var i = 0; i < foEntries; i++) {
+				var temp = this.GenerateRawFileListing(fl.folderEntries[i], outFiles, outFolders);
+				outFiles = temp.outFiles;
+				outFolders = temp.outFolders;
+			}
+			
+			return {
+				outFiles: outFiles,
+				outFolders: outFolders
+			}
+		}
+
+		public SetNextBlock(blockNum: number, nextBlockNum: number) {
+			if (blockNum >= this.metaData.stfsVolumeDescriptor.allocatedBlockCount)
+				throw "STFS: Reference to illegal block number.";
+
+			var hashLoc = this.GetHashAddressOfBlock(blockNum) + 0x15;
+			this.io.SetPosition(hashLoc);
+			this.io.WriteInt24(nextBlockNum);
+
+			if (this.topLevel == Level.Zero)
+				this.topTable.entries[blockNum].nextBlock = nextBlockNum;
+		}
+
+		public AllocateBlock(): number {
+			this.cached = new HashTable();
+			this.cached.addressInFile = 0;
+			this.cached.entryCount = 0;
+			this.cached.level = <Level> -1;
+			this.cached.trueBlockNumber = 0xFFFFFFFF;
+
+			var lengthToWrite = 0x1000;
+
+
+			this.metaData.stfsVolumeDescriptor.allocatedBlockCount++;
+
+			var recalcTablesPerLevel: number[] = [3];
+			recalcTablesPerLevel[0] = Math.floor(this.metaData.stfsVolumeDescriptor.allocatedBlockCount / 0xAA) + ((this.metaData.stfsVolumeDescriptor.allocatedBlockCount % 0xAA != 0) ? 1 : 0);
+			recalcTablesPerLevel[1] = Math.floor(recalcTablesPerLevel[0] / 0xAA) + ((recalcTablesPerLevel[0] % 0xAA != 0 && this.metaData.stfsVolumeDescriptor.allocatedBlockCount > 0xAA) ? 1 : 0);
+			recalcTablesPerLevel[2] = Math.floor(recalcTablesPerLevel[1] / 0xAA) + ((recalcTablesPerLevel[1] % 0xAA != 0 && this.metaData.stfsVolumeDescriptor.allocatedBlockCount > 0x70E4) ? 1 : 0);
+
+			for (var i = 2; i >= 0; i--) {
+				if (recalcTablesPerLevel[i] != this.tablesPerLevel[i]) {
+					lengthToWrite += (this.packageSex + 1) * 0x1000;
+					this.tablesPerLevel[i] = recalcTablesPerLevel[i];
+
+					if ((i + 1) == this.topLevel) {
+						this.topTable.entryCount++;
+						this.topTable.entries.push(new HashEntry());
+						this.topTable.entries[this.topTable.entryCount - 1].status[0] = 0;
+						this.topTable.entries[this.topTable.entryCount - 1].nextBlock = 0;
+
+
+						this.io.SetPosition(this.topTable.addressInFile + ((this.tablesPerLevel[i] - 1) * 0x18) + 0x15);
+						this.io.WriteInt24(StfsPackage.INT24_MAX);
+					}
+				}
+			}
+			
+			var tempBuffer = this.ArrayBufferExtend(this.io.buffer, lengthToWrite);
+			this.io.SetBuffer(tempBuffer);
+			this.io.SetPosition(this.io.buffer.byteLength - 1);
+
+			var newTop: Level = this.CalculateTopLevel();
+			if (this.topLevel != newTop) {
+				this.topLevel = newTop;
+				this.topTable.level = this.topLevel;
+
+				var blockOffset = this.metaData.stfsVolumeDescriptor.blockSeperation[0] & 2;
+				this.metaData.stfsVolumeDescriptor.blockSeperation[0] &= 0xFD;
+				this.topTable.addressInFile = this.GetHashTableAddress(0, this.topLevel);
+				this.topTable.entryCount = 2;
+				this.topTable.trueBlockNumber = this.ComputeLevelNBackingHashBlockNumber(0, this.topLevel);
+
+				this.topTable.entries = [];
+
+				this.topTable.entries[0].status[0] = blockOffset << 5;
+				this.io.SetPosition(this.topTable.addressInFile + 0x14);
+				this.io.WriteByte(this.topTable.entries[0].status);
+
+				this.metaData.stfsVolumeDescriptor.blockSeperation[0] &= 0xFD;
+			}
+
+			this.io.SetPosition(this.GetHashAddressOfBlock(this.metaData.stfsVolumeDescriptor.allocatedBlockCount - 1) + 0x14);
+			this.io.WriteByte(new Uint8Array([0x80]));
+
+			if (this.topLevel == Level.Zero) {
+				this.topTable.entryCount++;
+				this.topTable.entries.push(new HashEntry());
+				this.topTable.entries[this.metaData.stfsVolumeDescriptor.allocatedBlockCount - 1].status[0] = BlockStatusLevelZero.Allocated;
+				this.topTable.entries[this.metaData.stfsVolumeDescriptor.allocatedBlockCount - 1].nextBlock = StfsPackage.INT24_MAX;
+			}
+
+			this.io.WriteInt24(StfsPackage.INT24_MAX);
+			
+			this.metaData.WriteVolumeDescriptor();
+
+			
+			return this.metaData.stfsVolumeDescriptor.allocatedBlockCount - 1;
+		}
+
+		public GetHashTableAddress(index: number, lvl: Level): number {
+			var baseAddress = this.GetBaseHashTableAddress(index, lvl);
+			
+			if (this.packageSex == Sex.StfsFemale)
+				return baseAddress;
+
+			else if (lvl = this.topTable.level)
+				return baseAddress + ((this.metaData.stfsVolumeDescriptor.blockSeperation[0] & 2) << 0xB);
+			else {
+				this.io.SetPosition(this.GetTableHashAddress(index, lvl));
+			}
+		}
+
+		public GetBaseHashTableAddress(index: number, lvl: Level) {
+			return ((this.ComputeLevelNBackingHashBlockNumber(index * dataBlocksPerHashTreeLevel[lvl], lvl) << 0xC) + this.firstHashTableAddress);
+		}
+
+		public GetTableHashAddress(index: number, lvl: Level): number {
+			if (lvl >= this.topTable.level || lvl < Level.Zero)
+				throw "STFS: Level is invalid. No parent hash address accessible.";
+
+			var baseHashAddress = this.GetBaseHashTableAddress(Math.floor(index / 0xAA), <Level>(lvl + 1));
+
+			if (lvl + 1 == this.topLevel)
+				baseHashAddress += ((this.metaData.stfsVolumeDescriptor.blockSeperation[0] & 2) << 0xB);
+			else
+				baseHashAddress += ((this.topTable.entries[index].status[0] & 0x40) << 6);
+
+			return baseHashAddress + (index * 0x18);
+		}
+
+		public FindDirectoryListing(locationOfDirectory: string[], start: StfsFileListing) {
+			
+			if (locationOfDirectory.length == 0)
+				return start;
+
+			var finalLoop = (locationOfDirectory.length == 1);
+			for (var i = 0; i < start.folderEntries.length; i++) {
+				if (start.folderEntries[i].folder.name == locationOfDirectory[0]) {
+					locationOfDirectory = locationOfDirectory.slice(0, 1);
+					if (finalLoop)
+						return start.folderEntries[i];
+					else
+						for (var i = 0; i < start.folderEntries.length; i++)
+							return this.FindDirectoryListing(locationOfDirectory, start.folderEntries[i]);
+				}
+			}
+		}
+
+		public ArrayBufferExtend(buf: ArrayBuffer, appendedLength: number): ArrayBuffer {
+			var tmp = new Uint8Array(buf.byteLength + appendedLength);
+			tmp.set(new Uint8Array(buf), 0);
+			return tmp.buffer;
+		}
+
+		public ArrayBufferConcat(buf1: ArrayBuffer, buf2: ArrayBuffer): ArrayBuffer {
+			var tmp = new Uint8Array(buf1.byteLength + buf2.byteLength);
+			tmp.set(new Uint8Array(buf1), 0);
+			tmp.set(new Uint8Array(buf2), buf2.byteLength);
+			return tmp.buffer;
+		}
 	}
 
 
@@ -565,6 +964,11 @@ module XboxInternals.Stfs {
 		blockHash: Uint8Array;
 		status: Uint8Array;
 		nextBlock: number;
+
+		constructor() {
+			this.blockHash = new Uint8Array(0x14);
+			this.status = new Uint8Array(0x1);
+		}
 	}
 
 	export class HashTable {

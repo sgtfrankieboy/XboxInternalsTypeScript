@@ -46,14 +46,18 @@ module XboxInternals.IO {
 			return this.buffer.byteLength;
 		}
 
+		public SetBuffer(buffer: ArrayBuffer) {
+			this.buffer = buffer;
+		}
+
 		public ReadByte(): Uint8Array {
-			return new Uint8Array(this.buffer, this._position++, 1);
+			return this.clone(new Uint8Array(this.buffer, this._position++, 1));
 		}
 
 		public ReadBytes(len: number): Uint8Array {
 			var ret = new Uint8Array(this.buffer, this._position, len);
 			this.SetPosition(this.GetPosition() + len);
-			return ret;
+			return this.clone(ret);
 		}
 
 		public ReadUInt8(): number {
@@ -231,6 +235,40 @@ module XboxInternals.IO {
 				array[array.length - i - 1] = temp;
 			}
 			return array;
+		}
+
+		// Clones the variable to stop the stream from writing as soon as the variable is changed.
+		// Fixes the flags bug.
+		private clone(obj) {
+			// Handle the 3 simple types, and null or undefined
+			if (null == obj || "object" != typeof obj) return obj;
+
+			// Handle Date
+			if (obj instanceof Date) {
+				var copy: any = new Date();
+				copy.setTime(obj.getTime());
+				return copy;
+			}
+
+			// Handle Array
+			if (obj instanceof Array) {
+				var copy = [];
+				for (var i = 0, len = obj.length; i < len; i++) {
+					copy[i] = this.clone(obj[i]);
+				}
+				return copy;
+			}
+
+			// Handle Object
+			if (obj instanceof Object) {
+				var copy = {};
+				for (var attr in obj) {
+					if (obj.hasOwnProperty(attr)) copy[attr] = this.clone(obj[attr]);
+				}
+				return copy;
+			}
+
+			throw new Error("Unable to copy obj! Its type isn't supported.");
 		}
 
 		public Save(fileName: string) {

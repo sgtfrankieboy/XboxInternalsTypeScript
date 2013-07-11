@@ -177,6 +177,12 @@ module XboxInternals.Stfs {
 			}
 		}
 
+		public WriteVolumeDescriptor() {
+			if (this.fileSystem == FileSystem.FileSystemSTFS)
+				this.WriteStfsVolumeDescriptorEx(this.stfsVolumeDescriptor, this.io, (this.flags & XContentFlags.MetadataIsPEC) ? 0x244 : 0x379);
+			// TODO: Write SVOD Volume Descriptor
+		}
+
 		private io: IO.BaseIO;
 		private flags: number;
 

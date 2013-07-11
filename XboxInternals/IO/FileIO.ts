@@ -18,6 +18,9 @@ module XboxInternals.IO {
 				io.fileName = file.name;
 				callback(io);
 			};
+			reader.onerror = (e) => {
+				console.error(e.message);
+			};
 			reader.readAsArrayBuffer(file);
 		}
 		

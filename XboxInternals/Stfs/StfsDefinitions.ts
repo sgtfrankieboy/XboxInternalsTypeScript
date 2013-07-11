@@ -119,6 +119,23 @@ module XboxInternals.Stfs {
 			};
 		}
 
+		public WriteStfsVolumeDescriptorEx(descriptor: StfsVolumeDescriptor, io: IO.BaseIO, address: number) {
+			io.SetPosition(address);
+			
+			var start = 0x240000;
+			start |= descriptor.blockSeperation[0];
+			io.WriteInt24(start);
+
+			io.SwapEndian();
+			io.WriteWord(descriptor.fileTableBlockCount);
+			io.SwapEndian();
+
+			io.WriteInt24(descriptor.fileTableBlockNum, IO.EndianType.LittleEndian);
+			io.WriteBytes(descriptor.topHashTableHash);
+			io.WriteDword(descriptor.allocatedBlockCount);
+			io.WriteDword(descriptor.unallocatedBlockCount);
+		}
+
 		public LicenseTypeToString(type: LicenseEntry): string {
 			switch (type) {
 				case LicenseType.Unused:
