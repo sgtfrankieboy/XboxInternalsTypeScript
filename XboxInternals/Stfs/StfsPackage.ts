@@ -955,6 +955,123 @@ module XboxInternals.Stfs {
 			}
 		}
 
+		public ReplaceFileFromPath(input: IO.FileIO, pathInPackage: string, onProgress: (progress: number) => any = null) {
+			var entry = this.GetFileEntryFromPath(pathInPackage);
+			this.ReplaceFile(input, entry, pathInPackage, onProgress);
+		}
+
+		public ReplaceFile(fileIn: IO.FileIO, entry: StfsFileEntry, pathInPackage: string, onProgress) {
+			if (entry.nameLen[0] == 0)
+				throw "STFS: File doesn't exists in the package.";
+
+			var fileSize = fileIn.buffer.byteLength;
+
+			entry.fileSize = fileSize;
+			entry.blocksForFile = ((fileSize + 0xFFF) & 0xFFFFFFF000) >> 0xC;
+
+			var block = entry.startingBlockNum;
+			this.io.SetPosition(this.BlockToAddress(block));
+
+			var fullReads = Math.floor(fileSize / 0x1000);
+			var first = true;
+			var alwaysAllocate = false;
+
+			// Write the folders to the listing
+			for (var i = 0; i < fullReads; i++) {
+				if (!first) {
+					// check if we need to allocate a new block
+					var nextBlock: number;
+					if (alwaysAllocate) {
+						nextBlock = this.AllocateBlock();
+
+						// if so, set the current block pointing to the next one
+						this.SetNextBlock(block, nextBlock);
+					} else {
+						// see if a block was already allocated with the previous table
+						nextBlock = this.GetBlockHashEntry(block).nextBlock;
+
+						// if not, allocate one and make it so it always allocates
+						if (nextBlock == StfsPackage.INT24_MAX) {
+							nextBlock = this.AllocateBlock();
+							this.SetNextBlock(block, nextBlock);
+							alwaysAllocate = true;						
+						}
+					}
+
+					// go to the next block position
+					block = nextBlock;
+					this.io.SetPosition(this.BlockToAddress(block));
+				} else 
+					first = false;
+
+				this.io.WriteBytes(fileIn.ReadBytes(0x1000));
+
+				if (onProgress != null)
+					onProgress(Math.floor(101 / fullReads) * i);
+			}
+			
+			var remainder = fileSize % 0x1000;
+			if (remainder != 0) {
+				var nextBlock: number;
+				if (!first) {
+					
+					// check if we need to allocate a new block
+					if (alwaysAllocate) {
+						nextBlock = this.AllocateBlock();
+
+						// if so, set the current block pointing to the next one
+						this.SetNextBlock(block, nextBlock);
+					} else {
+						
+						// see if a block was already allocated with the previous table
+						nextBlock = this.GetBlockHashEntry(block).nextBlock;
+
+						if (nextBlock == StfsPackage.INT24_MAX) {
+							nextBlock = this.AllocateBlock();
+							this.SetNextBlock(block, nextBlock);
+							alwaysAllocate = true;
+						}
+					}
+
+					block = nextBlock;
+				}
+
+				this.io.SetPosition(this.BlockToAddress(block));
+
+				this.io.WriteBytes(fileIn.ReadBytes(remainder));
+			}
+
+			this.SetNextBlock(block, StfsPackage.INT24_MAX);
+
+			entry.flags[0] &= 0x2;
+
+			this.io.SetPosition(entry.fileEntryAddress + 0x28);
+			this.io.WriteByte(new Uint8Array([entry.nameLen[0] | (entry.flags[0] << 6)]));
+			this.io.WriteInt24(entry.blocksForFile, IO.EndianType.LittleEndian);
+			this.io.WriteInt24(entry.blocksForFile, IO.EndianType.LittleEndian);
+
+			this.io.SetPosition(entry.fileEntryAddress + 0x34);
+			this.io.WriteDword(entry.fileSize);
+			this.UpdateEntry(pathInPackage, entry);
+
+			if (this.topLevel = Level.Zero) {
+				this.io.SetPosition(this.topTable.addressInFile);
+
+				for (var i = 0; i < this.topTable.entryCount; i++) {
+					this.topTable.entries[i].blockHash = this.io.ReadBytes(0x14);
+					this.topTable.entries[i].status = this.io.ReadByte();
+					this.topTable.entries[i].nextBlock = this.io.ReadInt24();
+				}
+			}
+
+			if (onProgress)
+				onProgress(100);
+		}
+
+		private UpdateEntry(pathInPackage: string, entry: StfsFileEntry) {
+			this.GetFileEntry(pathInPackage.split("\\"), this.fileListing, entry, true);
+		}
+
 		/**
 		 * Renames a file inside the STFS Package to the given name
 		 * @param newName The new file name
