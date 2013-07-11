@@ -606,7 +606,7 @@ module XboxInternals.Stfs {
 			var fileName: string;
 			if (size > 1) {
 				fileName = split[size - 1];
-				split = split.slice(size - 1, 1);
+				split = split.splice(size - 1, 1);
 
 				folder = this.FindDirectoryListing(split, this.fileListing);
 				if (folder == null)
@@ -621,14 +621,14 @@ module XboxInternals.Stfs {
 			var entry: StfsFileEntry = new StfsFileEntry();
 			entry.name = fileName;
 
-			if (fileName.length >= 0x28)
+			if (fileName.length > 0x28)
 				throw "STFS: file entry name length cannot be greater than 40(0x28) characters.";
 
 			entry.fileSize = fileSize;
 			entry.flags = new Uint8Array([FileEntryFlags.ConsecutiveBlocks]);
 			entry.pathIndicator = folder.folder.entryIndex;
 			entry.startingBlockNum = StfsPackage.INT24_MAX;
-			entry.blocksForFile = ((fileSize + 0xFFF) & 0xFFFFFFF000) >> 0xC;
+            entry.blocksForFile = ((fileSize + 0xFFF) & 0xFFFFFFF000) >> 0xC;
 			entry.createdTimeStamp = Date.now();
 			entry.accessTimeStamp = entry.createdTimeStamp;
 
@@ -636,7 +636,6 @@ module XboxInternals.Stfs {
 			var block = 0;
 			var prevBlock = StfsPackage.INT24_MAX;
 			var counter = 0;
-			var data = new Uint8Array(0x1000);
 			while (fileSize >= 0x1000) {
 				block = this.AllocateBlock();
 
@@ -728,7 +727,7 @@ module XboxInternals.Stfs {
 
 			for (var i = 0; i < outFolders.length; i++) {
 				if (firstCheck)
-					firstCheck = true;
+					firstCheck = false;
 				else if ((i + 1) % 0x40 == 0) {
 					var nextBlock: number;
 					if (alwaysAllocate) {
@@ -757,7 +756,7 @@ module XboxInternals.Stfs {
 			var outFoldersAndFilesSize = outFileSize + outFiles.length;
 			for (var i = outFileSize; i < outFoldersAndFilesSize; i++) {
 				if (firstCheck)
-					firstCheck = true;
+					firstCheck = false;
 				else if ((i + 1) % 0x40 == 0) {
 					var nextBlock: number;
 					if (alwaysAllocate) {
