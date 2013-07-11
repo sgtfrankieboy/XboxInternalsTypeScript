@@ -27,6 +27,12 @@
       <DependentUpon>AvatarAssetDefinitions.ts</DependentUpon>
     </Content>
     <Content Include="AvatarAssets\AvatarAssetDefinitions.ts" />
+    <Content Include="Cryptography\sha1.js">
+      <DependentUpon>sha1.ts</DependentUpon>
+    </Content>
+    <Content Include="Cryptography\sha1.min.js">
+      <DependentUpon>sha1.ts</DependentUpon>
+    </Content>
     <Content Include="default.htm" />
     <Content Include="app.js">
       <DependentUpon>app.ts</DependentUpon>
@@ -45,6 +51,7 @@
       <DependentUpon>FileIO.ts</DependentUpon>
     </Content>
     <Content Include="IO\FileIO.ts" />
+    <Content Include="Cryptography\sha1.ts" />
     <Content Include="Stfs\StfsConstants.js">
       <DependentUpon>StfsConstants.ts</DependentUpon>
     </Content>
@@ -104,6 +111,12 @@
     </Content>
     <Content Include="Stfs\StfsDefinitions.js.map">
       <DependentUpon>StfsDefinitions.ts</DependentUpon>
+    </Content>
+    <Content Include="Cryptography\sha1.js.map">
+      <DependentUpon>sha1.ts</DependentUpon>
+    </Content>
+    <Content Include="Cryptography\sha1.min.js.map">
+      <DependentUpon>sha1.js</DependentUpon>
     </Content>
     <None Include="web.Debug.config">
       <DependentUpon>web.config</DependentUpon>

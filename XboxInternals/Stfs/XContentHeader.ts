@@ -159,7 +159,7 @@ module XboxInternals.Stfs {
 				this.thumbnailImageSize = this.io.ReadDword();
 				this.titleThumbnailImageSize = this.io.ReadDword();
 
-				this.thumbnailImage = this.io.ReadImage(this.thumbnailImageSize);
+				this.thumbnailImage = this.io.ReadBytes(this.thumbnailImageSize);
 				this.io.SetPosition(0x571A);
 			} else {
 				
@@ -180,8 +180,170 @@ module XboxInternals.Stfs {
 		public WriteVolumeDescriptor() {
 			if (this.fileSystem == FileSystem.FileSystemSTFS)
 				this.WriteStfsVolumeDescriptorEx(this.stfsVolumeDescriptor, this.io, (this.flags & XContentFlags.MetadataIsPEC) ? 0x244 : 0x379);
-			// TODO: Write SVOD Volume Descriptor
-		}
+            // TODO: Write SVOD Volume Descriptor
+        }
+
+        public WriteMetaData() {            
+            /* seek to the begining of the file
+            this.io.SetPosition(0);
+
+            if ((this.flags & XContentFlags.MetadataIsPEC) == 0)
+            {
+
+                this.io.WriteDword(this.magic);
+
+                if (this.magic == Magic.CON)
+                    ;//this.WriteCertificate(); DO THIS!!!
+                /*else
+                {
+                    except << "XContentHeader: Content signature type 0x" << hex << (DWORD) magic << " is invalid.\n";
+                    throw except.str();
+                } DO THIS!
+
+                // Write the licensing data
+                this.io.SetPosition(0x22C);
+                for (var i = 0; i < 0x10; i++)
+                {
+                    this.io.Write(((UINT64) licenseData[i].type << 48) | (UINT64) licenseData[i].data);
+                    this.io.WriteDword(this.licenseData[i].bits);
+                    this.io.WritelicenseData(this.licenseData[i].flags);
+                }
+
+                this.io.WriteBytes(this.headerHash);
+                this.io.WriteDword(this.headerSize);
+                this.io.WriteDword(this.contentType);
+                this.io.WriteDword(this.metaDataVersion);
+                //this.io.Write((UINT64) contentSize); DO THIS
+                this.io.SetPosition(this.io.GetPosition() + 8);
+                this.io.WriteDword(this.mediaID);
+                this.io.WriteDword(this.version);
+                this.io.WriteDword(this.baseVersion);
+                this.io.WriteDword(this.titleID);
+                this.io.WriteByte(this.platform);
+                this.io.WriteByte(this.executableType);
+                this.io.WriteByte(this.discNumber);
+                this.io.WriteByte(this.discInSet);
+                this.io.WriteDword(this.savegameID);
+                this.io.WriteBytes(this.consoleID);
+                this.io.WriteBytes(this.profileID);
+
+                this.WriteVolumeDescriptor();
+
+                this.io.WriteDword(this.dataFileCount);
+                //this.io.Write(this.dataFileCombinedSize); INT64 - DO THIS!!
+
+                // Write the avatar asset metadata if needed
+                if (this.contentType == ContentType.AvatarItem)
+                {
+                    this.io.SetPosition(0x3D9);
+                    this.io.SwapEndian();
+
+                    this.io.WriteDword(this.subCategory);
+                    this.io.WriteDword(this.colorizable);
+                    
+                    this.io.SwapEndian();
+
+                    this.io.WriteBytes(this.guid);
+                    this.io.WriteByte(new Uint8Array([this.skeletonVersion]));
+                }
+                else if (this.contentType == ContentType.Video)
+                {
+                    this.io.SetPosition(0x3D9);
+
+                    this.io.WriteBytes(this.seriesID);
+                    this.seasonID = this.io.ReadBytes(0x10);
+
+                    this.io.WriteWord(this.seasonNumber);
+                    this.io.WriteWord(this.episodeNumber);
+                }
+
+                // skip padding
+                this.io.SetPosition(0x3FD);
+
+                this.io.WriteBytes(this.deviceID);
+                this.io.WriteString(this.displayName);
+
+                this.io.SetPosition(0xD11);
+                this.io.WriteString(this.displayDescription);
+
+                this.io.SetPosition(0x1611);
+                this.io.WriteString(this.publisherName);
+
+                this.io.SetPosition(0x1691);
+                this.io.WriteString(this.titleName);
+
+                this.io.SetPosition(0x1711);
+                this.io.WriteByte(this.transferFlags);
+
+                this.io.WriteDword(this.thumbnailImageSize);
+                this.io.WriteDword(this.titleThumbnailImageSize);
+                
+                this.io.WriteBytes(this.thumbnailImage);
+                this.io.SetPosition(0x571A);
+                this.io.WriteBytes(this.titleThumbnailImage);
+
+                if (((this.headerSize + 0xFFF) & 0xFFFFF000) - 0x971A < 0x15F4)
+                    return;
+
+                this.io.WriteDword(this.installerType);
+                switch (this.installerType) {
+                    case InstallerType.SystemUpdate:
+                    case InstallerType.TitleUpdate:
+                        {
+                var tempbv = 0;
+                            tempbv |= (installerBaseVersion.major & 0xF) << 28;
+                            tempbv |= (installerBaseVersion.minor & 0xF) << 24;
+                            tempbv |= (installerBaseVersion.build & 0xFFFF) << 8;
+                            tempbv |= installerBaseVersion.revision & 0xFF;
+                            this.io.Write(tempbv);
+
+                var tempv = 0;
+                            tempv |= (installerVersion.major & 0xF) << 28;
+                            tempv |= (installerVersion.minor & 0xF) << 24;
+                            tempv |= (installerVersion.build & 0xFFFF) << 8;
+                            tempv |= installerVersion.revision & 0xFF;
+                            this.io.Write(tempv);
+
+                            break;
+                        }
+
+                    case InstallerType.SystemUpdateProgressCache:
+                    case InstallerType.TitleUpdateProgressCache:
+                    case InstallerType.TitleContentProgressCache:
+                        {
+                            this.io.WriteDword(this.resumeState);
+                            this.io.WriteDword(this.currentFileIndex);
+                            this.io.WriteDword(this.currentFileOffset);
+                            this.io.WriteDword(this.bytesProcessed);
+
+                            //WINFILETIME time = XdbfHelpers::TimeTtoFILETIME(lastModified); DO THIS!!
+                            //this.io.Write(time.dwHighDateTime); DO THIS!!
+                            //this.io.Write(time.dwLowDateTime); DO THIS!!
+
+                            //this.io.WriteBytes(this.cabResumeData); DO THE ABOVE!!
+                            break;
+                        }
+
+                    case InstallerType.None:
+                        break;
+                }
+            }
+            else
+            {
+                this.consoleID = this.certificate.ownerConsoleID;
+                //this.WriteCertificateEx(this.certificate, io, 0); DO THIS!!
+                this.io.SetPosition(0x32C);
+                this.io.WriteBytes(headerHash);
+
+                this.WriteStfsVolumeDescriptorEx(this.stfsVolumeDescriptor, this.io, 0x244);
+
+                // *skip missing int*
+                this.io.SetPosition(0x26C);
+                this.io.WriteBytes(this.profileID);
+                this.io.WriteByte(new Uint8Array([(this.enabled ? 1 : 0)]));
+                this.io.WriteBytes(this.consoleID);
+            }*/
+        }
 
 		private io: IO.BaseIO;
 		private flags: number;
@@ -254,7 +416,7 @@ module XboxInternals.Stfs {
 		installerBaseVersion: Version;
 		installerVersion: Version;
 
-		thumbnailImage: HTMLImageElement;
-		titleThumbnailImage: HTMLImageElement;
+		thumbnailImage: Uint8Array;
+        titleThumbnailImage: Uint8Array;
 	}
 }

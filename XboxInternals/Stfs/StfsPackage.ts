@@ -3,6 +3,7 @@
 /// <reference path='StfsConstants.ts' />
 /// <reference path='StfsDefinitions.ts' />
 /// <reference path='XContentHeader.ts' />
+/// <reference path='../Cryptography/sha1.ts' />
 
 
 
@@ -61,7 +62,7 @@ module XboxInternals.Stfs {
 			// Todo: Write code that sets default values when package is created.
 
 			if (this.metaData.fileSystem != FileSystem.FileSystemSTFS && (this.flags & StfsPackageFlags.StfsPackagePEC) == 0)
-				throw "STFS: Invalid file system header.";
+				throw "STFS: invalid file system header.";
 
 			this.packageSex = <Sex>((~this.metaData.stfsVolumeDescriptor.blockSeperation[0]) & 1);
 
@@ -152,7 +153,6 @@ module XboxInternals.Stfs {
 			for (var i = 0; i < fullListing.folderEntries.length; i++)
 				this.PrintFileListing(fullListing.folderEntries[i], prefix + "    ");
 		}
-
 
 		public GetFileListing(forceUpdate: boolean): StfsFileListing {
 			if (forceUpdate)
@@ -284,9 +284,8 @@ module XboxInternals.Stfs {
 			else if (this.metaData.stfsVolumeDescriptor.allocatedBlockCount <= 0x4AF768)
 				return Level.Two;
 			else
-				throw "STFS: Invalid number of allocated blocks.";
+				throw "STFS: invalid number of allocated blocks.";
 		}
-
 
 		private ComputeLevelNBackingHashBlockNumber(blockNum: number, level: Level): number {
 			switch (level) {
@@ -297,9 +296,18 @@ module XboxInternals.Stfs {
 				case Level.Two:
 					return this.ComputeLevel2BackingHashBlockNumber(blockNum);
 				default:
-					throw "STFS: Invalid level.";
+					throw "STFS: invalid level.";
 			}
-		}
+        }
+
+        private WriteUint32Array(array: Uint32Array) {
+            for (var i = 0; i < array.length; i++)
+                this.io.WriteDword(array[i]);
+        }
+
+        private HashBlock(block: Uint8Array): Uint8Array {
+            return sha1.hash(block);
+        }
 
 		private ComputeLevel0BackingHashBlockNumber(blockNum: number): number {
 			if (blockNum < 0xAA)
@@ -334,7 +342,6 @@ module XboxInternals.Stfs {
 				return (1 << <number>this.packageSex) + (toReturn + (Math.floor((blockNum + 0x70E4) / 0x70E4) << <number>this.packageSex));
 		}
 
-
 		private BlockToAddress(blockNum: number): number {
 			if (blockNum >= StfsPackage.INT24_MAX)
 				throw "STFS: block number must be less than 0xFFFFFF.";
@@ -343,7 +350,7 @@ module XboxInternals.Stfs {
 
 		public GetHashAddressOfBlock(blockNum: number): number {
 			if (blockNum >= this.metaData.stfsVolumeDescriptor.allocatedBlockCount)
-				throw "STFS: Reference to illegal block number.";
+				throw "STFS: reference to illegal block number.";
 
 			var hashAddr = (this.ComputeLevel0BackingHashBlockNumber(blockNum) << 0xC) + this.firstHashTableAddress;
 			hashAddr += (blockNum % 0xAA) * 0x18;
@@ -368,7 +375,7 @@ module XboxInternals.Stfs {
 
 		private GetBlockHashEntry(blockNum: number): HashEntry {
 			if (blockNum >= this.metaData.stfsVolumeDescriptor.allocatedBlockCount)
-				throw "STFS: Reference to illegal block number.";
+				throw "STFS: reference to illegal block number.";
 
 			this.io.SetPosition(this.GetHashAddressOfBlock(blockNum));
 
@@ -383,11 +390,10 @@ module XboxInternals.Stfs {
 			var entry = this.GetFileEntry(pathInPackage.split('\\'), this.fileListing, newEntry, (newEntry != null), checkFolders);
 
 			if (entry.nameLen[0] == 0)
-				throw "STFS: File entry " + pathInPackage + " cannot be found in the package.";
+				throw "STFS: file entry " + pathInPackage + " cannot be found in the package.";
 
 			return entry;
 		}
-
 
 		private GetFileEntry(locationOfFile: string[], start: StfsFileListing, newEntry: StfsFileEntry = null, updateEntry: boolean = false, checkFolders: boolean = false): StfsFileEntry {
 
@@ -438,12 +444,11 @@ module XboxInternals.Stfs {
 			return nullEntry;
 		}
 
-
 		public WriteFileEntry(entry: StfsFileEntry) {
 			entry.nameLen = new Uint8Array([entry.name.length]);
 
 			if (entry.nameLen[0] > 0x28)
-				throw "STFS: File entry name length cannot be  greater than 40(0x28) characters.";
+				throw "STFS: file entry name length cannot be  greater than 40(0x28) characters.";
 
 			var nameLengthAndFlags = entry.nameLen[0] | (entry.flags[0] << 6);
 
@@ -465,7 +470,7 @@ module XboxInternals.Stfs {
 
 		private ExtractBlock(blockNum: number, length: number = 0x1000): Uint8Array {
 			if (blockNum >= this.metaData.stfsVolumeDescriptor.allocatedBlockCount)
-				throw "STFS: Reference to illegal block number.";
+				throw "STFS: reference to illegal block number.";
 			if (length > 0x1000)
 				throw "STFS: length cannot be greater 0x1000";
 
@@ -480,7 +485,7 @@ module XboxInternals.Stfs {
 
 		public ExtractFile(entry: StfsFileEntry, onProgress: (extractProgress: number) => any = null): IO.FileIO {
 			if (entry.nameLen[0] == 0)
-				throw "STFS: File '" + entry.name + "' doesn't exist in the package.";
+				throw "STFS: file '" + entry.name + "' doesn't exist in the package.";
 
 			var fileSize = entry.fileSize;
 
@@ -597,7 +602,7 @@ module XboxInternals.Stfs {
 
 		public InjectFile(input: IO.FileIO, pathInPackage: string, onProgress: (progress: number) => any = null) {
 			if (this.FileExists(pathInPackage))
-				throw "STFS: File already exists in the package.";
+				throw "STFS: file already exists in the package.";
 
 			var split: string[] = pathInPackage.split("\\");
 			var folder: StfsFileListing;
@@ -610,7 +615,7 @@ module XboxInternals.Stfs {
 
 				folder = this.FindDirectoryListing(split, this.fileListing);
 				if (folder == null)
-					throw "STFS: The given folder could not be found.";
+					throw "STFS: the given folder could not be found.";
 			} else {
 				fileName = pathInPackage;
 				folder = this.fileListing;
@@ -819,7 +824,7 @@ module XboxInternals.Stfs {
 
 		public SetNextBlock(blockNum: number, nextBlockNum: number) {
 			if (blockNum >= this.metaData.stfsVolumeDescriptor.allocatedBlockCount)
-				throw "STFS: Reference to illegal block number.";
+				throw "STFS: reference to illegal block number.";
 
 			var hashLoc = this.GetHashAddressOfBlock(blockNum) + 0x15;
 			this.io.SetPosition(hashLoc);
@@ -925,7 +930,7 @@ module XboxInternals.Stfs {
 
 		public GetTableHashAddress(index: number, lvl: Level): number {
 			if (lvl >= this.topTable.level || lvl < Level.Zero)
-				throw "STFS: Level is invalid. No parent hash address accessible.";
+				throw "STFS: level is invalid. No parent hash address accessible.";
 
 			var baseHashAddress = this.GetBaseHashTableAddress(Math.floor(index / 0xAA), <Level>(lvl + 1));
 
@@ -962,7 +967,7 @@ module XboxInternals.Stfs {
 
 		public ReplaceFile(fileIn: IO.FileIO, entry: StfsFileEntry, pathInPackage: string, onProgress) {
 			if (entry.nameLen[0] == 0)
-				throw "STFS: File doesn't exists in the package.";
+				throw "STFS: file doesn't exists in the package.";
 
 			var fileSize = fileIn.buffer.byteLength;
 
@@ -1071,6 +1076,186 @@ module XboxInternals.Stfs {
 		private UpdateEntry(pathInPackage: string, entry: StfsFileEntry) {
 			this.GetFileEntry(pathInPackage.split("\\"), this.fileListing, entry, true);
 		}
+
+        public GetLevelNHashTable(index: number, lvl: Level): HashTable {
+            var toReturn: HashTable = new HashTable();
+            toReturn.level = lvl;
+
+            toReturn.trueBlockNumber = this.ComputeLevelNBackingHashBlockNumber(index * dataBlocksPerHashTreeLevel[lvl], lvl);
+            var baseHashAddress = ((toReturn.trueBlockNumber << 0xC) + this.firstHashTableAddress);
+
+            if (lvl < 0 || lvl > this.topLevel)
+                throw "STFS: invalid level.\n";
+            else if (lvl == this.topLevel)
+                return this.topTable;
+            else if (lvl + 1 == this.topLevel)
+            {
+                baseHashAddress += ((this.topTable.entries[index].status[0] & 0x40) << 6);
+
+                if (index + 1 == this.tablesPerLevel[lvl])
+                    toReturn.entryCount = (lvl == Level.Zero) ? this.metaData.stfsVolumeDescriptor.allocatedBlockCount % 0xAA : this.tablesPerLevel[lvl - 1] % 0xAA;
+                else
+                    toReturn.entryCount = 0xAA;
+            }
+            else
+            {
+                if (this.cached.trueBlockNumber != this.ComputeLevelNBackingHashBlockNumber(index * 0xAA, Level.One))
+                    this.cached = this.GetLevelNHashTable(index % 0xAA, Level.One);
+                baseHashAddress += ((this.cached.entries[index % 0xAA].status[0] & 0x40) << 6);
+
+                if (index + 1 == this.tablesPerLevel[lvl])
+                    toReturn.entryCount = this.metaData.stfsVolumeDescriptor.allocatedBlockCount % 0xAA;
+                else
+                    toReturn.entryCount = 0xAA;
+            }
+            toReturn.addressInFile = baseHashAddress;
+            this.io.SetPosition(toReturn.addressInFile);
+
+            toReturn.entries = new Array(toReturn.entryCount);
+            for (var i = 0; i < toReturn.entryCount; i++)
+            {
+                toReturn.entries[i] = new HashEntry();
+                toReturn.entries[i].blockHash = this.io.ReadBytes(0x14);
+                toReturn.entries[i].status = this.io.ReadByte();
+                toReturn.entries[i].nextBlock = this.io.ReadInt24();
+            }
+
+            return toReturn;
+        }
+
+        public Rehash() {
+            var blockBuffer: Uint8Array;
+            switch (this.topLevel) {
+                case Level.Zero:
+                    this.io.SetPosition(this.BlockToAddress(0));
+                    for (var i = 0; i < this.topTable.entryCount; i++)
+                    {
+                        blockBuffer = this.io.ReadBytes(0x1000);
+                        this.topTable.entries[i].blockHash = sha1.hash(blockBuffer);
+                    }
+
+                    break;
+
+                case Level.One:
+                    for (var i = 0; i < this.topTable.entryCount; i++)
+                    {
+                        var level0Table: HashTable = this.GetLevelNHashTable(i, Level.Zero);
+
+                        this.io.SetPosition(this.BlockToAddress(i * 0xAA));
+
+                        for (var x = 0; x < level0Table.entryCount; x++)
+                        {
+                            blockBuffer = this.io.ReadBytes(0x1000);
+                            level0Table.entries[x].blockHash = this.HashBlock(blockBuffer);
+                        }
+
+                        blockBuffer = this.BuildTableInMemory(level0Table);
+
+                        this.io.SetPosition(level0Table.addressInFile);
+                        this.io.WriteBytes(blockBuffer);
+
+                        this.topTable.entries[i].blockHash = this.HashBlock(blockBuffer);
+                    }
+                    break;
+
+                case Level.Two:
+                    for (var i = 0; i < this.topTable.entryCount; i++)
+                    {
+                        var level1Table: HashTable = this.GetLevelNHashTable(i, Level.One);
+
+                        for (var x = 0; x < level1Table.entryCount; x++)
+                        {
+                            var level0Table: HashTable = this.GetLevelNHashTable((i * 0xAA) + x, Level.Zero);
+                            this.io.SetPosition(this.BlockToAddress((i * 0x70E4) + (x * 0xAA)));
+
+                            for (var y = 0; y < level0Table.entryCount; y++)
+                            {
+                                blockBuffer = this.io.ReadBytes(0x1000);
+                                level0Table.entries[y].blockHash = this.HashBlock(blockBuffer);
+                            }
+
+                            blockBuffer = this.BuildTableInMemory(level0Table);
+
+                            this.io.SetPosition(level0Table.addressInFile);
+                            this.io.WriteBytes(blockBuffer);
+
+                            level1Table.entries[x].blockHash = this.HashBlock(blockBuffer);
+                        }
+
+                        blockBuffer = this.BuildTableInMemory(level1Table);
+
+                        var blocksHashed: number;
+                        if (i + 1 == this.topTable.entryCount)
+                            blocksHashed = (this.metaData.stfsVolumeDescriptor.allocatedBlockCount % 0x70E4 == 0) ? 0x70E4 : this.metaData.stfsVolumeDescriptor.allocatedBlockCount % 0x70E4;
+                        else
+                            blocksHashed = 0x70E4;
+
+                        blockBuffer[0xFF0] = blocksHashed & 0xFF;
+                        blockBuffer[0xFF1] = (blocksHashed >> 8) & 0xFF;
+                        blockBuffer[0xFF2] = (blocksHashed >> 16) & 0xFF;
+                        blockBuffer[0xFF3] = (blocksHashed >> 24) & 0xFF;
+
+                        this.io.SetPosition(level1Table.addressInFile);
+                        this.io.WriteBytes(blockBuffer);
+
+                        this.topTable.entries[i].blockHash = this.HashBlock(blockBuffer);
+                    }
+                    break;
+            }
+
+            blockBuffer = this.BuildTableInMemory(this.topTable);
+
+            if (this.topTable.level >= Level.One)
+            {
+                var allocatedBlockCountSwapped = this.metaData.stfsVolumeDescriptor.allocatedBlockCount;
+
+                blockBuffer[0xFF0] = allocatedBlockCountSwapped & 0xFF;
+                blockBuffer[0xFF1] = (allocatedBlockCountSwapped >> 8) & 0xFF;
+                blockBuffer[0xFF2] = (allocatedBlockCountSwapped >> 16) & 0xFF;
+                blockBuffer[0xFF3] = (allocatedBlockCountSwapped >> 24) & 0xFF;
+            }
+
+            this.metaData.stfsVolumeDescriptor.topHashTableHash = this.HashBlock(blockBuffer);
+
+            this.io.SetPosition(this.topTable.addressInFile);
+            this.io.WriteBytes(blockBuffer);
+
+            this.metaData.WriteVolumeDescriptor();
+            
+            var headerStart;
+
+            if (this.flags & StfsPackageFlags.StfsPackagePEC)
+                headerStart = 0x23C;
+            else
+                headerStart = 0x344;
+
+            var calculated = ((this.metaData.headerSize + 0xFFF) & 0xF000);
+            var headerSize = calculated - headerStart;
+
+            var buffer: Uint8Array = new Uint8Array(headerSize);
+            this.io.SetPosition(headerStart);
+            buffer = this.io.ReadBytes(headerSize);
+
+            this.metaData.headerHash = sha1.hash(buffer);
+
+            this.metaData.WriteMetaData();
+        }
+
+        private BuildTableInMemory(table: HashTable): Uint8Array {
+            var outBuffer = new Uint8Array(0x1000);
+
+            for (var i = 0; i < table.entryCount; i++) {
+                for (var x = 0; x < 0x14; x++)
+                    outBuffer[i * 0x18 + x] = table.entries[i].blockHash[x];
+
+                outBuffer[i * 0x18 + 0x15] = (table.entries[i].nextBlock >> 16) & 0xFF;
+                outBuffer[i * 0x18 + 0x16] = (table.entries[i].nextBlock >> 8) & 0xFF;
+                outBuffer[i * 0x18 + 0x17] = (table.entries[i].nextBlock & 0xFF);
+            }
+
+            return outBuffer;
+        }
+
 
 		/**
 		 * Renames a file inside the STFS Package to the given name
