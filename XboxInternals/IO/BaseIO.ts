@@ -83,14 +83,15 @@ module XboxInternals.IO {
 			if (et != EndianType.Default)
 				this.byteOrder = et;
 
-			var returnVal = this.ReadDword();
+			var int24Bytes = this.ReadBytes(0x3);
+            var returnVal;
 
-			if (this.byteOrder == EndianType.BigEndian)
-				returnVal = (returnVal & 0xFFFFFF00) >> 8;
+			if (this.byteOrder == EndianType.LittleEndian)
+                returnVal = (int24Bytes[2] << 16) | (int24Bytes[1] << 8) | (int24Bytes[0]);
 			else
-				returnVal = returnVal & 0x00FFFFFF;
+                returnVal = (int24Bytes[0] << 16) | (int24Bytes[1] << 8) | (int24Bytes[2]);
 
-			this.SetPosition(this.GetPosition() - 1);
+			//this.SetPosition(this.GetPosition() - 1);
 			this.byteOrder = orig;
 
 			return returnVal;
