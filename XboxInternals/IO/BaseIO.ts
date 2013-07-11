@@ -52,13 +52,13 @@ module XboxInternals.IO {
 		}
 
 		public ReadByte(): Uint8Array {
-			return this.clone(new Uint8Array(this.buffer, this._position++, 1));
+			return this.Clone(new Uint8Array(this.buffer, this._position++, 1));
 		}
 
 		public ReadBytes(len: number): Uint8Array {
 			var ret = new Uint8Array(this.buffer, this._position, len);
 			this.SetPosition(this.GetPosition() + len);
-			return this.clone(ret);
+			return this.Clone(ret);
 		}
 
 		public ReadUInt8(): number {
@@ -134,8 +134,8 @@ module XboxInternals.IO {
 
 		public ReadString(len = -1, nullTerminiator = 0, forceInclude0 = true, maxLength = 0x7FFFFFFF): string {
 
-			var stringBytes = new Uint8Array(this.buffer, this._position, len);
-			var i = 0;
+			var stringBytes = this.Clone(new Uint8Array(this.buffer, this._position, len));
+			var i = 0;1
 			for (; i < stringBytes.length; i++)
 				if (stringBytes[i] == 0)
 					break;
@@ -147,7 +147,7 @@ module XboxInternals.IO {
 
 		public ReadImage(length: number): HTMLImageElement {
 			var binary = '';
-			var bytes = new Uint8Array(this.buffer, this._position, length);
+			var bytes = this.Clone(new Uint8Array(this.buffer, this._position, length));
 			for (var i = 0; i < bytes.length; i++) {
 				binary += String.fromCharCode(bytes[i]);
 			}
@@ -240,7 +240,7 @@ module XboxInternals.IO {
 
 		// Clones the variable to stop the stream from writing as soon as the variable is changed.
 		// Fixes the flags bug.
-		private clone(obj) {
+		public Clone(obj) {
 			// Handle the 3 simple types, and null or undefined
 			if (null == obj || "object" != typeof obj) return obj;
 
@@ -255,7 +255,7 @@ module XboxInternals.IO {
 			if (obj instanceof Array) {
 				var copy = [];
 				for (var i = 0, len = obj.length; i < len; i++) {
-					copy[i] = this.clone(obj[i]);
+					copy[i] = this.Clone(obj[i]);
 				}
 				return copy;
 			}
@@ -264,7 +264,7 @@ module XboxInternals.IO {
 			if (obj instanceof Object) {
 				var copy = {};
 				for (var attr in obj) {
-					if (obj.hasOwnProperty(attr)) copy[attr] = this.clone(obj[attr]);
+					if (obj.hasOwnProperty(attr)) copy[attr] = this.Clone(obj[attr]);
 				}
 				return copy;
 			}

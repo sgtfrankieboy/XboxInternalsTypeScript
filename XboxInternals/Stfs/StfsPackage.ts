@@ -955,6 +955,22 @@ module XboxInternals.Stfs {
 			}
 		}
 
+		/**
+		 * Renames a file inside the STFS Package to the given name
+		 * @param newName The new file name
+		 * @param pathInPackage Location of the file
+		 */
+		public RenameFile(newName: string, pathInPackage: string) {
+			var entry = this.io.Clone(this.GetFileEntryFromPath(pathInPackage, true));
+			entry.name = newName;
+
+			// update the entry in memory
+			entry = this.GetFileEntryFromPath(pathInPackage, true, entry);
+
+			this.io.SetPosition(entry.fileEntryAddress);
+			this.WriteFileEntry(entry);
+		}
+
 		public ArrayBufferExtend(buf: ArrayBuffer, appendedLength: number): ArrayBuffer {
 			var tmp = new Uint8Array(buf.byteLength + appendedLength);
 			tmp.set(new Uint8Array(buf), 0);
