@@ -41,12 +41,24 @@ module XboxInternals.Stfs {
 		}
 
 		private Init() {
-			// TODO: Write code that allows for writing.
+			if (this.flags & StfsPackageFlags.StfsPackageCreate) {
+				var headerSize = (this.flags & StfsPackageFlags.StfsPackagePEC) ? ((this.flags & StfsPackageFlags.StfsPackageFemale) ? 0x2000 : 0x1000) : ((this.flags & StfsPackageFlags.StfsPackageFemale) ? 0xB000 : 0xA000);
+				var zeroBuffer = new Uint8Array(0x1000);
+				for (var i = 0; i < ((headerSize >> 0xC) + ((this.flags & StfsPackageFlags.StfsPackageFemale) ? 1 : 2) + 2); i++) {
+					this.io.WriteBytes(zeroBuffer);
+				}
+
+				this.io.SetPosition((this.flags & StfsPackageFlags.StfsPackagePEC) ? 0x246 : 0x37B);
+				this.io.WriteByte(new Uint8Array([(this.flags & StfsPackageFlags.StfsPackageFemale) >> 2]));
+			}
+
 			this.Parse();
 		}
 
 		private Parse() {
 			this.metaData = new XContentHeader(this.io, (this.flags & StfsPackageFlags.StfsPackagePEC));
+
+			// Todo: Write code that sets default values when package is created.
 
 			if (this.metaData.fileSystem != FileSystem.FileSystemSTFS && (this.flags & StfsPackageFlags.StfsPackagePEC) == 0)
 				throw "STFS: Invalid file system header.";
@@ -139,6 +151,34 @@ module XboxInternals.Stfs {
 
 			for (var i = 0; i < fullListing.folderEntries.length; i++)
 				this.PrintFileListing(fullListing.folderEntries[i], prefix + "    ");
+		}
+
+
+		public GetFileListing(forceUpdate: boolean): StfsFileListing {
+			if (forceUpdate)
+				this.ReadFileListing();
+
+			return this.fileListing;
+		}
+
+		public GetFileMagicFromPath(pathInPackage: string): number {
+			return this.GetFileMagic(this.GetFileEntryFromPath(pathInPackage));
+		}
+
+		public GetFileMagic(entry: StfsFileEntry): number {
+			// make sure the file is at least 4 bytes
+			if (entry.fileSize < 4)
+				return 0;
+
+			// seek to the begining of the file in the package
+			this.io.SetPosition(this.BlockToAddress(entry.startingBlockNum))
+
+			// read the magic
+			return this.io.ReadDword();
+		}
+
+		public IsPEC(): boolean {
+			return (this.flags & StfsPackageFlags.StfsPackagePEC) == 1;
 		}
 
 		private ReadFileListing() {
@@ -339,7 +379,7 @@ module XboxInternals.Stfs {
 			};
 		}
 
-		public GetFileEntryFromPath(pathInPackage: string, checkFolders: boolean = false, newEntry: StfsFileEntry = null): StfsFileEntry {
+		private GetFileEntryFromPath(pathInPackage: string, checkFolders: boolean = false, newEntry: StfsFileEntry = null): StfsFileEntry {
 			var entry = this.GetFileEntry(pathInPackage.split('\\'), this.fileListing, newEntry, (newEntry != null), checkFolders);
 
 			if (entry.nameLen[0] == 0)
@@ -349,7 +389,7 @@ module XboxInternals.Stfs {
 		}
 
 
-		public GetFileEntry(locationOfFile: string[], start: StfsFileListing, newEntry: StfsFileEntry = null, updateEntry: boolean = false, checkFolders: boolean = false): StfsFileEntry {
+		private GetFileEntry(locationOfFile: string[], start: StfsFileListing, newEntry: StfsFileEntry = null, updateEntry: boolean = false, checkFolders: boolean = false): StfsFileEntry {
 
 			if (locationOfFile.length == 1) {
 
@@ -532,7 +572,7 @@ module XboxInternals.Stfs {
 			}
 		}
 
-		public GetHashTableSkipSize(tableAddress: number): number {
+		private GetHashTableSkipSize(tableAddress: number): number {
 			
 			var trueBlockNumber = (tableAddress - this.firstHashTableAddress) >> 0xC;
 
@@ -757,7 +797,7 @@ module XboxInternals.Stfs {
 			this.ReadFileListing();
 		}
 
-		public GenerateRawFileListing(fl: StfsFileListing, outFiles: StfsFileEntry[], outFolders: StfsFileEntry[]): any {
+		private GenerateRawFileListing(fl: StfsFileListing, outFiles: StfsFileEntry[], outFolders: StfsFileEntry[]): any {
 			var fiEntries = fl.fileEntries.length;
 			var foEntries = fl.folderEntries.length;
 			for (var i = 0; i < fiEntries; i++) {
@@ -790,7 +830,7 @@ module XboxInternals.Stfs {
 				this.topTable.entries[blockNum].nextBlock = nextBlockNum;
 		}
 
-		public AllocateBlock(): number {
+		private AllocateBlock(): number {
 			this.cached = new HashTable();
 			this.cached.addressInFile = 0;
 			this.cached.entryCount = 0;
@@ -898,7 +938,7 @@ module XboxInternals.Stfs {
 			return baseHashAddress + (index * 0x18);
 		}
 
-		public FindDirectoryListing(locationOfDirectory: string[], start: StfsFileListing) {
+		private FindDirectoryListing(locationOfDirectory: string[], start: StfsFileListing) {
 			
 			if (locationOfDirectory.length == 0)
 				return start;
