@@ -183,7 +183,8 @@ module XboxInternals.Stfs {
 			// TODO: Write SVOD Volume Descriptor
 		}
 
-		public WriteMetaData() {            
+		public WriteMetaData() {
+			return; // Not Yet fully functional.
 			// seek to the begining of the file
 			this.io.SetPosition(0);
 
@@ -304,7 +305,7 @@ module XboxInternals.Stfs {
 
 		public WriteCertificate() {
 			if (this.magic != Magic.CON && (this.flags & XContentFlags.MetadataIsPEC) == 0)
-				throw "XContentHeader: Error writing certificate. Package is strong signed and therefor doesn't have a certificate.");
+				throw "XContentHeader: Error writing certificate. Package is strong signed and therefor doesn't have a certificate.";
 			this.WriteCertificateEx(this.certificate, this.io, (this.flags & XContentFlags.MetadataIsPEC) ? 0 : 4);
 		}
 
