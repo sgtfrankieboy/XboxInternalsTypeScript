@@ -40,7 +40,6 @@ local.properties
 *.suo
 *.user
 *.config
-*.js
 *.map
 *.sln.docstates
 

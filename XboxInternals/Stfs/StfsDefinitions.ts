@@ -136,6 +136,16 @@ module XboxInternals.Stfs {
 			io.WriteDword(descriptor.unallocatedBlockCount);
 		}
 
+		public WriteCertificateEx(cert: Certificate, io: IO.BaseIO, address: number) {
+			io.SetPosition(address);
+
+			io.WriteWord(cert.publicKeyCertificateSize);
+			io.WriteBytes(cert.ownerConsoleID);
+			io.WriteString(cert.ownerConsolePartNumber, 0x11, false);
+			var temp = cert.consoleTypeFlags | cert.ownerConsoleType;
+			io.WriteDword(temp);
+		}
+
 		public LicenseTypeToString(type: LicenseEntry): string {
 			switch (type) {
 				case LicenseType.Unused:
