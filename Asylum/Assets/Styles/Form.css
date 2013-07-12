@@ -1,0 +1,117 @@
+﻿.form {
+	border: 10px solid rgba(0,0,0, 0.5);
+	-webkit-box-shadow: inset 1px 1px #000, inset -1px -1px #000;
+	box-shadow: inset 1px 1px #000, inset -1px -1px #000;
+	padding: 1px;
+	float: left;
+}
+	.form > header {
+		-moz-user-select: none;
+		-ms-user-select: none;
+		-webkit-user-select: none;
+		user-select: none;
+		height: 40px;
+		background: #ebebeb;
+		border-bottom: solid 1px #d4d4d4;
+	}
+
+.form > header > img {
+	padding: 2px;
+	background: #FAFAFA;
+	border: 1px solid #ABABAB;
+	float: left;
+	margin: 5px;
+}
+
+.form > header > h1 {
+	font-family: "Segoe UI", Frutiger, "Frutiger Linotype", "Dejavu Sans", "Helvetica Neue", Arial, sans-serif;
+	font-weight: normal;
+	font-size: 14px;
+	margin: 5px;
+	line-height: 30px;
+	color: #353535;
+	cursor: default;
+	float: left;
+}
+
+.form > header > #windowButtons {
+	float: right;
+		
+}
+
+	.form > header > #windowButtons > button {
+		margin: 7px;
+		font-size: 12px;
+		font-weight: lighter;
+		border: 1px solid rgba(0,0,0,0);
+		background: rgba(0,0,0,0);
+		width: 32px;
+		height: 26px;
+	}
+
+		.form > header > #windowButtons > button:active,
+		.form > header > #windowButtons > button:hover {
+			border: 1px solid #d4d4d4;
+			background: #ffffff;
+		}
+
+		.form > header > #windowButtons > #windowClose {
+			background-image: url(../Images/windowsIcons/Close.png);
+			background-repeat: no-repeat;
+			background-position: center;
+		}
+
+		.form > header > #windowButtons > #windowMinimize {
+			background-image: url(../Images/windowsIcons/Minimize.png);
+			background-repeat: no-repeat;
+			background-position: center;
+		}
+
+.form > section {
+	padding: 5px;
+	background: #fff;
+}
+
+	.form > section#tabContainer > div {
+		display: none;
+	}
+
+.form > footer {
+	margin-top: 5px;
+	background: #fafafa;
+	border-top: 1px solid #ededed;
+	text-align: center;
+	padding: 5px;
+	overflow: hidden;
+	position: absolute;
+	bottom: 1px;
+	right: 1px;
+	left: 1px;
+}
+
+.form > footer > ul {
+	text-align: center;
+	clear:both;
+}
+
+.form > footer > ul > li {
+	padding: 5px 20px;
+	border: 0;
+	background: rgba(0,0,0,0);
+	margin: 0;
+	float: left;
+	cursor: pointer;
+}
+
+
+.form > footer > ul > li:hover {
+	background: #4D4D4D;
+	color: #FFF;
+}
+
+.form > footer> ul > li.active:hover,
+.form > footer> ul > li.active {
+	background: #383838;
+	color: #FFF;
+}
+

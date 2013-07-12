@@ -633,7 +633,7 @@ module XboxInternals.Stfs {
 			entry.flags = new Uint8Array([FileEntryFlags.ConsecutiveBlocks]);
 			entry.pathIndicator = folder.folder.entryIndex;
 			entry.startingBlockNum = StfsPackage.INT24_MAX;
-            entry.blocksForFile = ((fileSize + 0xFFF) & 0xFFFFFFF000) >> 0xC;
+			entry.blocksForFile = ((fileSize + 0xFFF) & 0xFFFFFFF000) >> 0xC;
 			entry.createdTimeStamp = Date.now();
 			entry.accessTimeStamp = entry.createdTimeStamp;
 
@@ -960,12 +960,25 @@ module XboxInternals.Stfs {
 			}
 		}
 
+		/**
+		 * Replaces a file with the given file inside the STFS Package
+		 * @param fileIn the filestream of the new file
+		 * @param pathInPackage Path to the entry that is getting replaced
+		 * @param onProgress Callback to get the progress in precentage of replacing the entry
+		 */
 		public ReplaceFileFromPath(input: IO.FileIO, pathInPackage: string, onProgress: (progress: number) => any = null) {
 			var entry = this.GetFileEntryFromPath(pathInPackage);
 			this.ReplaceFile(input, entry, pathInPackage, onProgress);
 		}
 
-		public ReplaceFile(fileIn: IO.FileIO, entry: StfsFileEntry, pathInPackage: string, onProgress) {
+		/**
+		 * Replaces a file with the given file inside the STFS Package
+		 * @param fileIn The Filestream of the new file
+		 * @param entry The entry that is getting replaced
+		 * @param pathInPackage Path to the entry that is getting replaced
+		 * @param onProgress Callback to get the progress in precentage of replacing the entry
+		 */
+		public ReplaceFile(fileIn: IO.FileIO, entry: StfsFileEntry, pathInPackage: string, onProgress: (progress: number) => any = null) {
 			if (entry.nameLen[0] == 0)
 				throw "STFS: file doesn't exists in the package.";
 
@@ -1073,6 +1086,14 @@ module XboxInternals.Stfs {
 				onProgress(100);
 		}
 
+
+
+
+		/**
+		 * Updates a entry inside the STFS Package
+		 * @param pathInPackage Path to the entry inside the STFS Package to update
+		 * @param entry The updated entry
+		 */
 		private UpdateEntry(pathInPackage: string, entry: StfsFileEntry) {
 			this.GetFileEntry(pathInPackage.split("\\"), this.fileListing, entry, true);
 		}
@@ -1273,12 +1294,22 @@ module XboxInternals.Stfs {
 			this.WriteFileEntry(entry);
 		}
 
-		public ArrayBufferExtend(buf: ArrayBuffer, appendedLength: number): ArrayBuffer {
-			var tmp = new Uint8Array(buf.byteLength + appendedLength);
+		/**
+		 * Extends the given Array Buffer with the given length
+		 * @param buf ArrayBuffer that needs to be extended
+		 * @param length Amount of bytes to extend
+		 */
+		public ArrayBufferExtend(buf: ArrayBuffer, length: number): ArrayBuffer {
+			var tmp = new Uint8Array(buf.byteLength + length);
 			tmp.set(new Uint8Array(buf), 0);
 			return tmp.buffer;
 		}
 
+		/**
+		 * Concatenates the two given ArrayBuffers
+		 * @param buf1 First ArrayBuffer
+		 * @param buf2 Second ArrayBuffer
+		 */
 		public ArrayBufferConcat(buf1: ArrayBuffer, buf2: ArrayBuffer): ArrayBuffer {
 			var tmp = new Uint8Array(buf1.byteLength + buf2.byteLength);
 			tmp.set(new Uint8Array(buf1), 0);

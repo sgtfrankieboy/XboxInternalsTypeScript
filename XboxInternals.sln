@@ -3,6 +3,8 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 2012
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "XboxInternals", "XboxInternals\XboxInternals.csproj", "{CA226DCC-4E35-438B-9EF0-B28F3B1771E9}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Asylum", "Asylum\Asylum.csproj", "{15ABD16C-07D0-4AD5-BEAF-878B95EDCAC9}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -13,6 +15,10 @@ Global
 		{CA226DCC-4E35-438B-9EF0-B28F3B1771E9}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{CA226DCC-4E35-438B-9EF0-B28F3B1771E9}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{CA226DCC-4E35-438B-9EF0-B28F3B1771E9}.Release|Any CPU.Build.0 = Release|Any CPU
+		{15ABD16C-07D0-4AD5-BEAF-878B95EDCAC9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{15ABD16C-07D0-4AD5-BEAF-878B95EDCAC9}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{15ABD16C-07D0-4AD5-BEAF-878B95EDCAC9}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{15ABD16C-07D0-4AD5-BEAF-878B95EDCAC9}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

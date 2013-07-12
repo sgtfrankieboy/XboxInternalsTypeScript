@@ -142,16 +142,16 @@ module XboxInternals.Stfs {
 				this.io.SetPosition(0x3FD);
 				this.deviceID = this.io.ReadBytes(0x14);
 
-				this.displayName = this.io.ReadString(0x80);
+				this.displayName = this.io.ReadWString(0x80);
 
 				this.io.SetPosition(0xD11);
-				this.displayDescription = this.io.ReadString(0x80);
+				this.displayDescription = this.io.ReadWString(0x80);
 
 				this.io.SetPosition(0x1611);
-				this.publisherName = this.io.ReadString(0x80);
+				this.publisherName = this.io.ReadWString(0x80);
 
 				this.io.SetPosition(0x1691);
-				this.titleName = this.io.ReadString(0x80);
+				this.titleName = this.io.ReadWString(0x80);
 
 				this.io.SetPosition(0x1711);
 				this.transferFlag = this.io.ReadByte();

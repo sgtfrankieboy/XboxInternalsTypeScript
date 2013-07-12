@@ -68,7 +68,9 @@ module XboxInternals.IO {
 		}
 
 		public ReadInt16(): number {
-			return this.ReadWord();
+			var view = new DataView(this.buffer, this._position, 2);
+			this.SetPosition(this.GetPosition() + 2);
+			return view.getInt16(0, this.byteOrder == 1);
 		}
 
 		public ReadWord(): number {
@@ -84,12 +86,12 @@ module XboxInternals.IO {
 				this.byteOrder = et;
 
 			var int24Bytes = this.ReadBytes(0x3);
-            var returnVal;
+			var returnVal;
 
 			if (this.byteOrder == EndianType.LittleEndian)
-                returnVal = (int24Bytes[2] << 16) | (int24Bytes[1] << 8) | (int24Bytes[0]);
+				returnVal = (int24Bytes[2] << 16) | (int24Bytes[1] << 8) | (int24Bytes[0]);
 			else
-                returnVal = (int24Bytes[0] << 16) | (int24Bytes[1] << 8) | (int24Bytes[2]);
+				returnVal = (int24Bytes[0] << 16) | (int24Bytes[1] << 8) | (int24Bytes[2]);
 
 			//this.SetPosition(this.GetPosition() - 1);
 			this.byteOrder = orig;
@@ -99,7 +101,9 @@ module XboxInternals.IO {
 
 		
 		public ReadInt32(): number {
-			return this.ReadDword();
+			var view = new DataView(this.buffer, this.GetPosition(), 4);
+			this.SetPosition(this.GetPosition() + 4);
+			return view.getInt32(0, this.byteOrder == 1);
 		}
 
 		public ReadDword(): number {
@@ -138,12 +142,26 @@ module XboxInternals.IO {
 			var stringBytes = this.Clone(new Uint8Array(this.buffer, this._position, len));
 			var i = 0;1
 			for (; i < stringBytes.length; i++)
-				if (stringBytes[i] == 0)
+				if ((i + 1 < stringBytes.length && stringBytes[i + 1] == 0 && stringBytes[i] == 0) || (i + 1 >= stringBytes.length && stringBytes[i] == 0))
 					break;
 
 			var val = String.fromCharCode.apply(null, new Uint8Array(this.buffer, this._position, i));
 			this.SetPosition(this.GetPosition() + len);
 			return val;
+		}
+
+		public ReadWString(len = -1, nullTerminiator = 0, forceInclude0 = true, maxLength = 0x7FFFFFFF): string {
+			var stringBytes: Uint16Array = new Uint16Array(len);
+			var i = 0;
+			var currentChar;
+			var origPosition = this.GetPosition();
+			// Confusing code that reads the string in the correct endian
+			while ((i++ < len || len == -1) && (currentChar = this.ReadWord()) != nullTerminiator)
+				stringBytes[i - 1] = currentChar;
+
+			if (len != -1)
+				this.SetPosition(origPosition + len);
+			return String.fromCharCode.apply(null, stringBytes.subarray(0, i));
 		}
 
 		public ReadImage(length: number): HTMLImageElement {

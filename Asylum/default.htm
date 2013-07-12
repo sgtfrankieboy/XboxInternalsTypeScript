@@ -1,0 +1,103 @@
+﻿<!DOCTYPE html>
+
+<html lang="en">
+<head>
+	<meta charset="utf-16" />
+	<title>TypeScript HTML App</title>
+	<link rel="stylesheet" href="Assets/Styles/Reset.css" type="text/css" />
+	<link rel="stylesheet" href="Assets/Styles/Core.css" type="text/css" />
+	<link rel="stylesheet" href="Assets/Styles/Form.css" type="text/css" />
+	<link rel="stylesheet" href="Assets/Styles/Controls.css" type="text/css" />
+	<link rel="stylesheet" href="Assets/Styles/Forms/stfsPackageExplorer.css" type="text/css" />
+	<script src="Assets/Scripts/jQuery.js"></script>
+	<script src="Assets/Scripts/JQueryUI.js"></script>
+	<script src="Assets/Scripts/XboxInternals.js"></script>
+	<script src="app.js"></script>
+</head>
+<body>
+	<div id="forms">
+
+	</div>
+	<div id="templates" style="display: none;">
+		<div id="formStfsPackageExplorer" class="form" style="width: 500px">
+			<header>
+				<img id="windowIcon" src="Assets/Images/cabinet_open.png" />
+				<h1 id="windowTitle">STFS Package Explorer</h1>
+				<div id="windowButtons">
+					<button id="windowClose"></button>
+				</div>
+			</header>
+			<section id="tabContainer">
+				<div id="tab-1" style="display: block">
+					<div class="panel" style="width: 74px; float: left; margin-right: 10px;">
+						<section id="stfs_thumbnails">
+						</section>
+					</div>
+					<table class="itemList">
+						<tbody>
+							<tr>
+								<td>Display Name</td>
+								<td><input type="text" id="stfs_displayName" /></td>
+							</tr>
+							<tr>
+								<td>Title Name</td>
+								<td><input type="text" id="stfs_titleName" /></td>
+							</tr>
+							<tr>
+								<td>Title ID</td>
+								<td><input type="text" id="stfs_titleId" /></td>
+							</tr>
+							<tr>
+								<td>Profile ID</td>
+								<td><input type="text" id="stfs_profileId" /></td>
+							</tr>
+							<tr>
+								<td>Device ID</td>
+								<td><input type="text" id="stfs_deviceId" /></td>
+							</tr>
+							<tr>
+								<td>Console ID</td>
+								<td><input type="text" id="stfs_consoleId" /></td>
+							</tr>
+						</tbody>
+					</table>
+				</div>
+				<!--<div id="tab-2">
+					<table>
+						<thead>
+							<tr>
+								<th>File Name</th>
+								<th>File Size</th>
+								<th>Starting Address</th>
+								<th>Starting Block</th>
+							</tr>
+						</thead>
+						<tbody id="stfs_fileListing">
+							<tr>
+								<td></td>
+							</tr>
+						</tbody>
+					</table>
+				</div>-->
+			</section>
+			<footer id="tabHeader">
+				<ul>
+					<li id="stfs_btnSave">Save</li>
+					<li onclick="selectTab(1, $(this))" class="active">Info</li>
+					<!--<li onclick="selectTab(2, $(this))">Content</li>-->
+				</ul>
+			</footer>
+		</div>
+	</div>
+	<script>
+		function selectTab(id, el)
+		{
+			var $parent = $(el).parent().parent().parent();
+			$parent.find("#tabContainer > div").hide();
+			$parent.find("#tabHeader li").removeClass("active");
+			$(el).addClass("active");
+			$parent.find("#tab-" + id).show();
+		}
+	</script>
+</body>
+</html>
