@@ -613,7 +613,7 @@ var XboxInternals;
                 var dateGeneration = io.ReadString(0x8);
 
                 var publicExponent = io.ReadDword();
-                var publicModules = io.ReadBytes(0x80);
+                var publicModulus = io.ReadBytes(0x80);
                 var certificateSignature = io.ReadBytes(0x100);
                 var signature = io.ReadBytes(0x10);
 
@@ -625,7 +625,7 @@ var XboxInternals;
                     consoleTypeFlags: consoleTypeFlags,
                     dataGeneration: dateGeneration,
                     publicExponent: publicExponent,
-                    publicModules: publicModules,
+                    publicModulus: publicModulus,
                     certificateSignature: certificateSignature,
                     signature: signature
                 };

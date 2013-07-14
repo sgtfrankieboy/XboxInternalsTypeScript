@@ -27,6 +27,11 @@
       <DependentUpon>AvatarAssetDefinitions.ts</DependentUpon>
     </Content>
     <Content Include="AvatarAssets\AvatarAssetDefinitions.ts" />
+    <TypeScriptCompile Include="Cryptography\rsa.d.ts" />
+    <Content Include="Cryptography\rsa.d.js">
+      <DependentUpon>rsa.d.ts</DependentUpon>
+    </Content>
+    <Content Include="Cryptography\rsa.js" />
     <Content Include="Cryptography\sha1.js">
       <DependentUpon>sha1.ts</DependentUpon>
     </Content>
@@ -117,6 +122,9 @@
     </Content>
     <Content Include="Cryptography\sha1.min.js.map">
       <DependentUpon>sha1.js</DependentUpon>
+    </Content>
+    <Content Include="Stfs\StfsDefinitions.min.js.map">
+      <DependentUpon>StfsDefinitions.js</DependentUpon>
     </Content>
     <None Include="web.Debug.config">
       <DependentUpon>web.config</DependentUpon>

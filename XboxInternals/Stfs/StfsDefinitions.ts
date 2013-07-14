@@ -53,7 +53,7 @@ module XboxInternals.Stfs {
 		consoleTypeFlags: ConsoleTypeFlags;
 		dataGeneration: string;
 		publicExponent: number;
-		publicModules: Uint8Array;
+		publicModulus: Uint8Array;
 		certificateSignature: Uint8Array;
 		signature: Uint8Array;
 	}
@@ -143,7 +143,13 @@ module XboxInternals.Stfs {
 			io.WriteBytes(cert.ownerConsoleID);
 			io.WriteString(cert.ownerConsolePartNumber, 0x11, false);
 			var temp = cert.consoleTypeFlags | cert.ownerConsoleType;
-			io.WriteDword(temp);
+            io.WriteDword(temp);
+
+            io.WriteString(cert.dataGeneration, 0x8, false);
+            io.WriteDword(cert.publicExponent);
+            io.WriteBytes(cert.publicModulus);
+            io.WriteBytes(cert.certificateSignature);
+            io.WriteBytes(cert.signature);
 		}
 
 		public LicenseTypeToString(type: LicenseEntry): string {
@@ -203,22 +209,22 @@ module XboxInternals.Stfs {
 			var dateGeneration = io.ReadString(0x8);
 
 			var publicExponent = io.ReadDword();
-			var publicModules = io.ReadBytes(0x80);
+			var publicModulus = io.ReadBytes(0x80);
 			var certificateSignature = io.ReadBytes(0x100);
 			var signature = io.ReadBytes(0x10);
 
-			return {
-				publicKeyCertificateSize: publicKeyCertifcateSize,
-				ownerConsoleID: ownerConsoleID,
-				ownerConsolePartNumber: ownerConsolePartNumber,
-				ownerConsoleType: ownerConsoleType,
-				consoleTypeFlags: consoleTypeFlags,
-				dataGeneration: dateGeneration,
-				publicExponent: publicExponent,
-				publicModules: publicModules,
-				certificateSignature: certificateSignature,
-				signature: signature
-			}
+            return {
+                publicKeyCertificateSize: publicKeyCertifcateSize,
+                ownerConsoleID: ownerConsoleID,
+                ownerConsolePartNumber: ownerConsolePartNumber,
+                ownerConsoleType: ownerConsoleType,
+                consoleTypeFlags: consoleTypeFlags,
+                dataGeneration: dateGeneration,
+                publicExponent: publicExponent,
+                publicModulus: publicModulus,
+                certificateSignature: certificateSignature,
+                signature: signature
+            }
 		}
 
 	}

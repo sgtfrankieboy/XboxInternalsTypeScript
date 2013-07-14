@@ -184,7 +184,7 @@ declare module XboxInternals.Stfs {
         consoleTypeFlags: Stfs.ConsoleTypeFlags;
         dataGeneration: string;
         publicExponent: number;
-        publicModules: Uint8Array;
+        publicModulus: Uint8Array;
         certificateSignature: Uint8Array;
         signature: Uint8Array;
     }

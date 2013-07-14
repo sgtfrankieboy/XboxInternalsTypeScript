@@ -179,7 +179,11 @@ module XboxInternals.Stfs {
 
 		public IsPEC(): boolean {
 			return (this.flags & StfsPackageFlags.StfsPackagePEC) == 1;
-		}
+        }
+
+        public Resign() {
+            this.metaData.ResignHeader();
+        }
 
 		private ReadFileListing() {
 			this.fileListing.fileEntries.length = 0;
