@@ -512,6 +512,9 @@ declare module XboxInternals.Stfs {
         private ExtractBlock(blockNum, length?);
         public ExtractFileFromPath(pathInPackage: string, onProgress?: (extractProgress: number) => any): XboxInternals.IO.FileIO;
         public ExtractFile(entry: StfsFileEntry, onProgress?: (extractProgress: number) => any): XboxInternals.IO.FileIO;
+        private SetBlockStatus(blockNum, status);
+        public RemoveFileFromPath(pathInPackage: string): void;
+        public RemoveFile(entry: StfsFileEntry): void;
         private GetHashTableSkipSize(tableAddress);
         public FileExists(pathInPackage: string): boolean;
         public InjectFile(input: XboxInternals.IO.FileIO, pathInPackage: string, onProgress?: (progress: number) => any): StfsFileEntry;

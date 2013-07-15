@@ -582,6 +582,48 @@ module XboxInternals.Stfs {
 			}
 		}
 
+		private SetBlockStatus(blockNum: number, status: BlockStatusLevelZero) {
+			if (blockNum >= this.metaData.stfsVolumeDescriptor.allocatedBlockCount)
+				throw "STFS: Reference to illegal block number.";
+
+			
+
+			var statusAddress = this.GetHashAddressOfBlock(blockNum) + 0x14;
+			this.io.SetPosition(statusAddress);
+			this.io.WriteByte(new Uint8Array(status));
+		}
+
+		public RemoveFileFromPath(pathInPackage: string) {
+			this.RemoveFile(this.GetFileEntryFromPath(pathInPackage));
+		}
+
+		public RemoveFile(entry: StfsFileEntry) {
+		    var found = false;
+
+			var temp = this.GenerateRawFileListing(this.fileListing, [], []);
+			var files = <StfsFileEntry[]>temp.outFiles;
+			var folders = <StfsFileEntry[]>temp.outFolders;
+
+			for (var i = 0; i < files.length; i++) {
+				if(files[i].name == entry.name && files[i].pathIndicator == entry.pathIndicator) {
+					files.splice(i, 1);
+					found = true;
+					break;
+				}
+			}
+
+			if (!found)
+				throw "STFS: File could not be deleted because it doesn't exist in the package.";
+
+			var blockToDeallocate = entry.startingBlockNum;
+			while (blockToDeallocate != 0xFFFFFF) {
+				this.SetBlockStatus(blockToDeallocate, BlockStatusLevelZero.Unallocated);
+				blockToDeallocate = this.GetBlockHashEntry(blockToDeallocate).nextBlock;
+			}
+
+			this.WriteFileListing(true, files, folders);
+		}
+
 		private GetHashTableSkipSize(tableAddress: number): number {
 			
 			var trueBlockNumber = (tableAddress - this.firstHashTableAddress) >> 0xC;
@@ -716,6 +758,9 @@ module XboxInternals.Stfs {
 				var temp = this.GenerateRawFileListing(this.fileListing, [], []);
 				outFiles = temp.outFiles;
 				outFolders = temp.outFolders;
+			} else {
+				outFiles = outFis;
+				outFolders = outFos;
 			}
 
 			outFolders = outFolders.splice(1);

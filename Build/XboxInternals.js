@@ -1799,6 +1799,46 @@ var XboxInternals;
                 }
             };
 
+            StfsPackage.prototype.SetBlockStatus = function (blockNum, status) {
+                if (blockNum >= this.metaData.stfsVolumeDescriptor.allocatedBlockCount)
+                    throw "STFS: Reference to illegal block number.";
+
+                var statusAddress = this.GetHashAddressOfBlock(blockNum) + 0x14;
+                this.io.SetPosition(statusAddress);
+                this.io.WriteByte(new Uint8Array(status));
+            };
+
+            StfsPackage.prototype.RemoveFileFromPath = function (pathInPackage) {
+                this.RemoveFile(this.GetFileEntryFromPath(pathInPackage));
+            };
+
+            StfsPackage.prototype.RemoveFile = function (entry) {
+                var found = false;
+
+                var temp = this.GenerateRawFileListing(this.fileListing, [], []);
+                var files = temp.outFiles;
+                var folders = temp.outFolders;
+
+                for (var i = 0; i < files.length; i++) {
+                    if (files[i].name == entry.name && files[i].pathIndicator == entry.pathIndicator) {
+                        files.splice(i, 1);
+                        found = true;
+                        break;
+                    }
+                }
+
+                if (!found)
+                    throw "STFS: File could not be deleted because it doesn't exist in the package.";
+
+                var blockToDeallocate = entry.startingBlockNum;
+                while (blockToDeallocate != 0xFFFFFF) {
+                    this.SetBlockStatus(blockToDeallocate, Stfs.BlockStatusLevelZero.Unallocated);
+                    blockToDeallocate = this.GetBlockHashEntry(blockToDeallocate).nextBlock;
+                }
+
+                this.WriteFileListing(true, files, folders);
+            };
+
             StfsPackage.prototype.GetHashTableSkipSize = function (tableAddress) {
                 var trueBlockNumber = (tableAddress - this.firstHashTableAddress) >> 0xC;
 
@@ -1926,6 +1966,9 @@ var XboxInternals;
                     var temp = this.GenerateRawFileListing(this.fileListing, [], []);
                     outFiles = temp.outFiles;
                     outFolders = temp.outFolders;
+                } else {
+                    outFiles = outFis;
+                    outFolders = outFos;
                 }
 
                 outFolders = outFolders.splice(1);
