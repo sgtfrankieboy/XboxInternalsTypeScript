@@ -3,7 +3,6 @@
 *.config
 *.map
 *.sln.docstates
-*.bat
 
 
 XboxInternals.sln.ide

@@ -1,0 +1,1 @@
+tsc XboxInternals/Stfs/StfsPackage.ts --out Build/XboxInternals.js --declaration
