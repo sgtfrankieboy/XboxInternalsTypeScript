@@ -139,13 +139,15 @@ module XboxInternals.IO {
 
 		public ReadString(len = -1, nullTerminiator = 0, forceInclude0 = true, maxLength = 0x7FFFFFFF): string {
 
-			var stringBytes = this.Clone(new Uint8Array(this.buffer, this._position, len));
-			var i = 0;1
-			for (; i < stringBytes.length; i++)
-				if ((i + 1 < stringBytes.length && stringBytes[i + 1] == 0 && stringBytes[i] == 0) || (i + 1 >= stringBytes.length && stringBytes[i] == 0))
+			var stringBytes = new Uint8Array(new Uint8Array(this.buffer, this._position, len));
+			var i = 0;
+			for (i = 0; i < stringBytes.length; i++)
+				if (i + 1 < stringBytes.length && stringBytes[i + 1] == nullTerminiator) {
+					i++;
 					break;
+				}
 
-			var val = String.fromCharCode.apply(null, new Uint8Array(this.buffer, this._position, i));
+			var val = String.fromCharCode.apply(null, new Uint8Array(new Uint8Array(this.buffer, this._position, i)));
 			this.SetPosition(this.GetPosition() + len);
 			return val;
 		}

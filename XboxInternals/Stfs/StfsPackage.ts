@@ -179,11 +179,11 @@ module XboxInternals.Stfs {
 
 		public IsPEC(): boolean {
 			return (this.flags & StfsPackageFlags.StfsPackagePEC) == 1;
-        }
+		}
 
-        public Resign() {
-            this.metaData.ResignHeader();
-        }
+		public Resign() {
+			this.metaData.ResignHeader();
+		}
 
 		private ReadFileListing() {
 			this.fileListing.fileEntries.length = 0;
@@ -302,16 +302,16 @@ module XboxInternals.Stfs {
 				default:
 					throw "STFS: invalid level.";
 			}
-        }
+		}
 
-        private WriteUint32Array(array: Uint32Array) {
-            for (var i = 0; i < array.length; i++)
-                this.io.WriteDword(array[i]);
-        }
+		private WriteUint32Array(array: Uint32Array) {
+			for (var i = 0; i < array.length; i++)
+				this.io.WriteDword(array[i]);
+		}
 
-        private HashBlock(block: Uint8Array): Uint8Array {
-            return sha1.hash(block);
-        }
+		private HashBlock(block: Uint8Array): Uint8Array {
+			return sha1.hash(block);
+		}
 
 		private ComputeLevel0BackingHashBlockNumber(blockNum: number): number {
 			if (blockNum < 0xAA)
@@ -490,6 +490,7 @@ module XboxInternals.Stfs {
 		public ExtractFile(entry: StfsFileEntry, onProgress: (extractProgress: number) => any = null): IO.FileIO {
 			if (entry.nameLen[0] == 0)
 				throw "STFS: file '" + entry.name + "' doesn't exist in the package.";
+			var start = new Date().getTime();
 
 			var fileSize = entry.fileSize;
 
@@ -702,7 +703,6 @@ module XboxInternals.Stfs {
 					this.topTable.entries[i].nextBlock = this.io.ReadInt24();
 				}
 			}
-
 			return entry;
 
 		}
@@ -1102,184 +1102,184 @@ module XboxInternals.Stfs {
 			this.GetFileEntry(pathInPackage.split("\\"), this.fileListing, entry, true);
 		}
 
-        public GetLevelNHashTable(index: number, lvl: Level): HashTable {
-            var toReturn: HashTable = new HashTable();
-            toReturn.level = lvl;
+		public GetLevelNHashTable(index: number, lvl: Level): HashTable {
+			var toReturn: HashTable = new HashTable();
+			toReturn.level = lvl;
 
-            toReturn.trueBlockNumber = this.ComputeLevelNBackingHashBlockNumber(index * dataBlocksPerHashTreeLevel[lvl], lvl);
-            var baseHashAddress = ((toReturn.trueBlockNumber << 0xC) + this.firstHashTableAddress);
+			toReturn.trueBlockNumber = this.ComputeLevelNBackingHashBlockNumber(index * dataBlocksPerHashTreeLevel[lvl], lvl);
+			var baseHashAddress = ((toReturn.trueBlockNumber << 0xC) + this.firstHashTableAddress);
 
-            if (lvl < 0 || lvl > this.topLevel)
-                throw "STFS: invalid level.\n";
-            else if (lvl == this.topLevel)
-                return this.topTable;
-            else if (lvl + 1 == this.topLevel)
-            {
-                baseHashAddress += ((this.topTable.entries[index].status[0] & 0x40) << 6);
+			if (lvl < 0 || lvl > this.topLevel)
+				throw "STFS: invalid level.\n";
+			else if (lvl == this.topLevel)
+				return this.topTable;
+			else if (lvl + 1 == this.topLevel)
+			{
+				baseHashAddress += ((this.topTable.entries[index].status[0] & 0x40) << 6);
 
-                if (index + 1 == this.tablesPerLevel[lvl])
-                    toReturn.entryCount = (lvl == Level.Zero) ? this.metaData.stfsVolumeDescriptor.allocatedBlockCount % 0xAA : this.tablesPerLevel[lvl - 1] % 0xAA;
-                else
-                    toReturn.entryCount = 0xAA;
-            }
-            else
-            {
-                if (this.cached.trueBlockNumber != this.ComputeLevelNBackingHashBlockNumber(index * 0xAA, Level.One))
-                    this.cached = this.GetLevelNHashTable(index % 0xAA, Level.One);
-                baseHashAddress += ((this.cached.entries[index % 0xAA].status[0] & 0x40) << 6);
+				if (index + 1 == this.tablesPerLevel[lvl])
+					toReturn.entryCount = (lvl == Level.Zero) ? this.metaData.stfsVolumeDescriptor.allocatedBlockCount % 0xAA : this.tablesPerLevel[lvl - 1] % 0xAA;
+				else
+					toReturn.entryCount = 0xAA;
+			}
+			else
+			{
+				if (this.cached.trueBlockNumber != this.ComputeLevelNBackingHashBlockNumber(index * 0xAA, Level.One))
+					this.cached = this.GetLevelNHashTable(index % 0xAA, Level.One);
+				baseHashAddress += ((this.cached.entries[index % 0xAA].status[0] & 0x40) << 6);
 
-                if (index + 1 == this.tablesPerLevel[lvl])
-                    toReturn.entryCount = this.metaData.stfsVolumeDescriptor.allocatedBlockCount % 0xAA;
-                else
-                    toReturn.entryCount = 0xAA;
-            }
-            toReturn.addressInFile = baseHashAddress;
-            this.io.SetPosition(toReturn.addressInFile);
+				if (index + 1 == this.tablesPerLevel[lvl])
+					toReturn.entryCount = this.metaData.stfsVolumeDescriptor.allocatedBlockCount % 0xAA;
+				else
+					toReturn.entryCount = 0xAA;
+			}
+			toReturn.addressInFile = baseHashAddress;
+			this.io.SetPosition(toReturn.addressInFile);
 
-            toReturn.entries = new Array(toReturn.entryCount);
-            for (var i = 0; i < toReturn.entryCount; i++)
-            {
-                toReturn.entries[i] = new HashEntry();
-                toReturn.entries[i].blockHash = this.io.ReadBytes(0x14);
-                toReturn.entries[i].status = this.io.ReadByte();
-                toReturn.entries[i].nextBlock = this.io.ReadInt24();
-            }
+			toReturn.entries = new Array(toReturn.entryCount);
+			for (var i = 0; i < toReturn.entryCount; i++)
+			{
+				toReturn.entries[i] = new HashEntry();
+				toReturn.entries[i].blockHash = this.io.ReadBytes(0x14);
+				toReturn.entries[i].status = this.io.ReadByte();
+				toReturn.entries[i].nextBlock = this.io.ReadInt24();
+			}
 
-            return toReturn;
-        }
+			return toReturn;
+		}
 
-        public Rehash() {
-            var blockBuffer: Uint8Array;
-            switch (this.topLevel) {
-                case Level.Zero:
-                    this.io.SetPosition(this.BlockToAddress(0));
-                    for (var i = 0; i < this.topTable.entryCount; i++)
-                    {
-                        blockBuffer = this.io.ReadBytes(0x1000);
-                        this.topTable.entries[i].blockHash = sha1.hash(blockBuffer);
-                    }
+		public Rehash() {
+			var blockBuffer: Uint8Array;
+			switch (this.topLevel) {
+				case Level.Zero:
+					this.io.SetPosition(this.BlockToAddress(0));
+					for (var i = 0; i < this.topTable.entryCount; i++)
+					{
+						blockBuffer = this.io.ReadBytes(0x1000);
+						this.topTable.entries[i].blockHash = sha1.hash(blockBuffer);
+					}
 
-                    break;
+					break;
 
-                case Level.One:
-                    for (var i = 0; i < this.topTable.entryCount; i++)
-                    {
-                        var level0Table: HashTable = this.GetLevelNHashTable(i, Level.Zero);
+				case Level.One:
+					for (var i = 0; i < this.topTable.entryCount; i++)
+					{
+						var level0Table: HashTable = this.GetLevelNHashTable(i, Level.Zero);
 
-                        this.io.SetPosition(this.BlockToAddress(i * 0xAA));
+						this.io.SetPosition(this.BlockToAddress(i * 0xAA));
 
-                        for (var x = 0; x < level0Table.entryCount; x++)
-                        {
-                            blockBuffer = this.io.ReadBytes(0x1000);
-                            level0Table.entries[x].blockHash = this.HashBlock(blockBuffer);
-                        }
+						for (var x = 0; x < level0Table.entryCount; x++)
+						{
+							blockBuffer = this.io.ReadBytes(0x1000);
+							level0Table.entries[x].blockHash = this.HashBlock(blockBuffer);
+						}
 
-                        blockBuffer = this.BuildTableInMemory(level0Table);
+						blockBuffer = this.BuildTableInMemory(level0Table);
 
-                        this.io.SetPosition(level0Table.addressInFile);
-                        this.io.WriteBytes(blockBuffer);
+						this.io.SetPosition(level0Table.addressInFile);
+						this.io.WriteBytes(blockBuffer);
 
-                        this.topTable.entries[i].blockHash = this.HashBlock(blockBuffer);
-                    }
-                    break;
+						this.topTable.entries[i].blockHash = this.HashBlock(blockBuffer);
+					}
+					break;
 
-                case Level.Two:
-                    for (var i = 0; i < this.topTable.entryCount; i++)
-                    {
-                        var level1Table: HashTable = this.GetLevelNHashTable(i, Level.One);
+				case Level.Two:
+					for (var i = 0; i < this.topTable.entryCount; i++)
+					{
+						var level1Table: HashTable = this.GetLevelNHashTable(i, Level.One);
 
-                        for (var x = 0; x < level1Table.entryCount; x++)
-                        {
-                            var level0Table: HashTable = this.GetLevelNHashTable((i * 0xAA) + x, Level.Zero);
-                            this.io.SetPosition(this.BlockToAddress((i * 0x70E4) + (x * 0xAA)));
+						for (var x = 0; x < level1Table.entryCount; x++)
+						{
+							var level0Table: HashTable = this.GetLevelNHashTable((i * 0xAA) + x, Level.Zero);
+							this.io.SetPosition(this.BlockToAddress((i * 0x70E4) + (x * 0xAA)));
 
-                            for (var y = 0; y < level0Table.entryCount; y++)
-                            {
-                                blockBuffer = this.io.ReadBytes(0x1000);
-                                level0Table.entries[y].blockHash = this.HashBlock(blockBuffer);
-                            }
+							for (var y = 0; y < level0Table.entryCount; y++)
+							{
+								blockBuffer = this.io.ReadBytes(0x1000);
+								level0Table.entries[y].blockHash = this.HashBlock(blockBuffer);
+							}
 
-                            blockBuffer = this.BuildTableInMemory(level0Table);
+							blockBuffer = this.BuildTableInMemory(level0Table);
 
-                            this.io.SetPosition(level0Table.addressInFile);
-                            this.io.WriteBytes(blockBuffer);
+							this.io.SetPosition(level0Table.addressInFile);
+							this.io.WriteBytes(blockBuffer);
 
-                            level1Table.entries[x].blockHash = this.HashBlock(blockBuffer);
-                        }
+							level1Table.entries[x].blockHash = this.HashBlock(blockBuffer);
+						}
 
-                        blockBuffer = this.BuildTableInMemory(level1Table);
+						blockBuffer = this.BuildTableInMemory(level1Table);
 
-                        var blocksHashed: number;
-                        if (i + 1 == this.topTable.entryCount)
-                            blocksHashed = (this.metaData.stfsVolumeDescriptor.allocatedBlockCount % 0x70E4 == 0) ? 0x70E4 : this.metaData.stfsVolumeDescriptor.allocatedBlockCount % 0x70E4;
-                        else
-                            blocksHashed = 0x70E4;
+						var blocksHashed: number;
+						if (i + 1 == this.topTable.entryCount)
+							blocksHashed = (this.metaData.stfsVolumeDescriptor.allocatedBlockCount % 0x70E4 == 0) ? 0x70E4 : this.metaData.stfsVolumeDescriptor.allocatedBlockCount % 0x70E4;
+						else
+							blocksHashed = 0x70E4;
 
-                        blockBuffer[0xFF0] = blocksHashed & 0xFF;
-                        blockBuffer[0xFF1] = (blocksHashed >> 8) & 0xFF;
-                        blockBuffer[0xFF2] = (blocksHashed >> 16) & 0xFF;
-                        blockBuffer[0xFF3] = (blocksHashed >> 24) & 0xFF;
+						blockBuffer[0xFF0] = blocksHashed & 0xFF;
+						blockBuffer[0xFF1] = (blocksHashed >> 8) & 0xFF;
+						blockBuffer[0xFF2] = (blocksHashed >> 16) & 0xFF;
+						blockBuffer[0xFF3] = (blocksHashed >> 24) & 0xFF;
 
-                        this.io.SetPosition(level1Table.addressInFile);
-                        this.io.WriteBytes(blockBuffer);
+						this.io.SetPosition(level1Table.addressInFile);
+						this.io.WriteBytes(blockBuffer);
 
-                        this.topTable.entries[i].blockHash = this.HashBlock(blockBuffer);
-                    }
-                    break;
-            }
+						this.topTable.entries[i].blockHash = this.HashBlock(blockBuffer);
+					}
+					break;
+			}
 
-            blockBuffer = this.BuildTableInMemory(this.topTable);
+			blockBuffer = this.BuildTableInMemory(this.topTable);
 
-            if (this.topTable.level >= Level.One)
-            {
-                var allocatedBlockCountSwapped = this.metaData.stfsVolumeDescriptor.allocatedBlockCount;
+			if (this.topTable.level >= Level.One)
+			{
+				var allocatedBlockCountSwapped = this.metaData.stfsVolumeDescriptor.allocatedBlockCount;
 
-                blockBuffer[0xFF0] = allocatedBlockCountSwapped & 0xFF;
-                blockBuffer[0xFF1] = (allocatedBlockCountSwapped >> 8) & 0xFF;
-                blockBuffer[0xFF2] = (allocatedBlockCountSwapped >> 16) & 0xFF;
-                blockBuffer[0xFF3] = (allocatedBlockCountSwapped >> 24) & 0xFF;
-            }
+				blockBuffer[0xFF0] = allocatedBlockCountSwapped & 0xFF;
+				blockBuffer[0xFF1] = (allocatedBlockCountSwapped >> 8) & 0xFF;
+				blockBuffer[0xFF2] = (allocatedBlockCountSwapped >> 16) & 0xFF;
+				blockBuffer[0xFF3] = (allocatedBlockCountSwapped >> 24) & 0xFF;
+			}
 
-            this.metaData.stfsVolumeDescriptor.topHashTableHash = this.HashBlock(blockBuffer);
+			this.metaData.stfsVolumeDescriptor.topHashTableHash = this.HashBlock(blockBuffer);
 
-            this.io.SetPosition(this.topTable.addressInFile);
-            this.io.WriteBytes(blockBuffer);
+			this.io.SetPosition(this.topTable.addressInFile);
+			this.io.WriteBytes(blockBuffer);
 
-            this.metaData.WriteVolumeDescriptor();
-            
-            var headerStart;
+			this.metaData.WriteVolumeDescriptor();
+			
+			var headerStart;
 
-            if (this.flags & StfsPackageFlags.StfsPackagePEC)
-                headerStart = 0x23C;
-            else
-                headerStart = 0x344;
+			if (this.flags & StfsPackageFlags.StfsPackagePEC)
+				headerStart = 0x23C;
+			else
+				headerStart = 0x344;
 
-            var calculated = ((this.metaData.headerSize + 0xFFF) & 0xF000);
-            var headerSize = calculated - headerStart;
+			var calculated = ((this.metaData.headerSize + 0xFFF) & 0xF000);
+			var headerSize = calculated - headerStart;
 
-            var buffer: Uint8Array = new Uint8Array(headerSize);
-            this.io.SetPosition(headerStart);
-            buffer = this.io.ReadBytes(headerSize);
+			var buffer: Uint8Array = new Uint8Array(headerSize);
+			this.io.SetPosition(headerStart);
+			buffer = this.io.ReadBytes(headerSize);
 
-            this.metaData.headerHash = sha1.hash(buffer);
+			this.metaData.headerHash = sha1.hash(buffer);
 
-            this.metaData.WriteMetaData();
-        }
+			this.metaData.WriteMetaData();
+		}
 
-        private BuildTableInMemory(table: HashTable): Uint8Array {
-            var outBuffer = new Uint8Array(0x1000);
+		private BuildTableInMemory(table: HashTable): Uint8Array {
+			var outBuffer = new Uint8Array(0x1000);
 
-            for (var i = 0; i < table.entryCount; i++) {
-                for (var x = 0; x < 0x14; x++)
-                    outBuffer[i * 0x18 + x] = table.entries[i].blockHash[x];
+			for (var i = 0; i < table.entryCount; i++) {
+				for (var x = 0; x < 0x14; x++)
+					outBuffer[i * 0x18 + x] = table.entries[i].blockHash[x];
 
-                outBuffer[i * 0x18 + 0x15] = (table.entries[i].nextBlock >> 16) & 0xFF;
-                outBuffer[i * 0x18 + 0x16] = (table.entries[i].nextBlock >> 8) & 0xFF;
-                outBuffer[i * 0x18 + 0x17] = (table.entries[i].nextBlock & 0xFF);
-            }
+				outBuffer[i * 0x18 + 0x15] = (table.entries[i].nextBlock >> 16) & 0xFF;
+				outBuffer[i * 0x18 + 0x16] = (table.entries[i].nextBlock >> 8) & 0xFF;
+				outBuffer[i * 0x18 + 0x17] = (table.entries[i].nextBlock & 0xFF);
+			}
 
-            return outBuffer;
-        }
+			return outBuffer;
+		}
 
 
 		/**
