@@ -280,6 +280,13 @@ module XboxInternals.IO {
 				}
 				return copy;
 			}
+            
+            if (obj instanceof Uint8Array) {
+                var copy = new Uint8Array(obj.length);
+                for (var i = 0; i < copy.length; i++)
+                    copy[i] = obj[i];
+                return copy;
+            }
 
 			// Handle Object
 			if (obj instanceof Object) {
