@@ -405,7 +405,6 @@ declare module XboxInternals.Stfs {
         public WriteMetaData(): void;
         public ResignHeader(): void;
         static Uint8ArrayFromHex(str: string): Uint8Array;
-        static BnQw_SwapDwQwLeBe(data: Uint8Array): Uint8Array;
         public WriteCertificate(): void;
         private Uint8ArrayToHexString(array);
         private io;

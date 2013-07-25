@@ -275,6 +275,13 @@
                     return copy;
                 }
 
+                if (obj instanceof Uint8Array) {
+                    var copy = new Uint8Array(obj.length);
+                    for (var i = 0; i < copy.length; i++)
+                        copy[i] = obj[i];
+                    return copy;
+                }
+
                 if (obj instanceof Object) {
                     var copy = {};
                     for (var attr in obj) {
@@ -1215,6 +1222,11 @@ var XboxInternals;
                 var rsa = new RSAKey();
                 rsa.setPrivateEx("a31d6ce5fa95fde89021fad10c64192b86589b172b1005b8d1f84cef534cd54e5cae86ef927b90d1e062fd7c54559ee0e7befa3f9e156f6c384eaf070c61ab515e2353141888cb6fcbc5d630f406ed2423ef256d009177249be5a3c02790c297f7749d6f17837eb537de51e8d71ce156d956c8c3c3209d64c32f8c9192306fdb", "00010001", "51ec1f9d5626c2fc10a66764cb3a6d4da1e74ea842f0f4fdfa66efc78e102fe41ca31dd0ce392ec3192dd0587479ac08e790c1ac2dc6eb47e83dcf4c6dff5165d46ebd0f15793795c4af909e2b508a0a224ab341e5898073cdfa2102f5dd30dd072a6f340781977eb2fb72e9eac18839ac482ba84dfcd7ed9bf9dec245934c4c", "cce75dfe72b6fde71de31a0eac337ab921e88a849bda9f1e5834687ab11d7e1c1852657b978ea76a9dee5a77523b718f33d0495ec330397236bf1dd9f224e871", "cbca5874d403629306501f42f6aa5936a7a1f3975c9ac86a27cf85052a66416a7f2f84c81813c61d8dc7322f72193fa4ed71e761c0cf61ae8ba068a77d83230b", "4cca74e67435724858621114e8a24e5eed7f49d252da8701874af4d0ee69c026655313e752b04abbe13e3fb7322146f8c5114d3def66b650c085b579458f6171", "afdc46e7528a3547a11c054e392499e64354cbabe3db22761132d09cbb911084818b152fc32f5538edbf673c705eff8028f3b173b6fa7f562be1da4e274ec22f", "286abbd19395941a6eedd70ec0612bc2efe1863d3412886f94a4486ec9871e46004600528e9f47c08cabbc49ac5b13f2ec278d1b6e5106a6f1621aeb782e8848");
                 this.certificate.signature = XContentHeader.Uint8ArrayFromHex(rsa.signHashWithSHA1(this.Uint8ArrayToHexString(sha1DataToSign)));
+                for (var i = 0; i < this.certificate.signature.length / 2; i++) {
+                    this.certificate.signature[i] ^= this.certificate.signature[this.certificate.signature.length - (i + 1)];
+                    this.certificate.signature[this.certificate.signature.length - (i + 1)] ^= this.certificate.signature[i];
+                    this.certificate.signature[i] ^= this.certificate.signature[this.certificate.signature.length - (i + 1)];
+                }
 
                 this.certificate.publicKeyCertificateSize = 0x1A8;
                 this.certificate.ownerConsoleID = new Uint8Array([0x09, 0x12, 0xBA, 0x26, 0xE3]);
@@ -1236,21 +1248,6 @@ var XboxInternals;
                 }
 
                 return array;
-            };
-
-            XContentHeader.BnQw_SwapDwQwLeBe = function (data) {
-                if (data.length % 8 != 0)
-                    throw "STFS: length is not divisible by 8.\n";
-
-                var temp = new Uint8Array(data.length);
-                for (var i = 0; i < data.length; i += 8) {
-                    var begin = (data.length - (i + 8));
-                    var end = (data.length - i);
-
-                    for (var x = 7; x >= 0; x--)
-                        temp.set(data.subarray(begin + x, begin + x + 1), i + (7 - x));
-                }
-                return temp;
             };
 
             XContentHeader.prototype.WriteCertificate = function () {
