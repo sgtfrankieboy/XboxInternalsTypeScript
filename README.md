@@ -4,7 +4,7 @@ About
 -----
 XboxInternals is library written purely in [TypeScript](http://www.typescriptlang.org/) and is based off the XboxInternals Library from [Velocity](https://github.com/hetelek/Velocity).
 
-Currently STFS is almost supported. Only Rehash & Resign need to be finished.
+The library fully supports STFS including Rehashing and Resigning.
 
 Contributing
 ------------
